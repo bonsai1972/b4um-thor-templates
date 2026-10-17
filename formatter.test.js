@@ -166,6 +166,96 @@ class: "task-form" do |form| %>
     expect(await formatThorTemplate(result)).toBe(expected)
   })
 
+  it('formatiert mehrzeilige form.text_field-Argumente', async () => {
+    const source = `<%%= form.text_field :name,
+  class: "form-input",
+  placeholder: " ",
+  required: true,
+  autofocus: true,
+  data: {
+    b4um_todo_target: "input",
+    action: "input->b4um-todo#updateSubmitState" } %>`
+
+    const expected = `<%%= form.text_field :name,
+                    class: "form-input",
+                    placeholder: " ",
+                    required: true,
+                    autofocus: true,
+                    data: {
+                      b4um_todo_target: "input",
+                      action: "input->b4um-todo#updateSubmitState"
+                    } %>
+`
+
+    const result = await formatThorTemplate(source)
+
+    expect(result).toBe(expected)
+
+    // Wiederholtes Formatieren muss stabil bleiben.
+    expect(await formatThorTemplate(result)).toBe(expected)
+
+    // Die Ruby-Syntax darf sich nicht verändern.
+    expect(await sameRubySyntax(source, result.trimEnd())).toBe(true)
+  })
+
+  it('formatiert mehrzeilige form.label-Argumente', async () => {
+    const source = `<%%= form.label :name,
+  class: "form-label",
+  data: {
+    controller: "tooltip",
+    action: "click->tooltip#show" } %>`
+
+    const expected = `<%%= form.label :name,
+               class: "form-label",
+               data: {
+                 controller: "tooltip",
+                 action: "click->tooltip#show"
+               } %>
+`
+
+    const result = await formatThorTemplate(source)
+
+    expect(result).toBe(expected)
+    expect(await formatThorTemplate(result)).toBe(expected)
+    expect(await sameRubySyntax(source, result.trimEnd())).toBe(true)
+  })
+
+  it('formatiert mehrzeilige form.submit-Argumente', async () => {
+    const source = `<%%= form.submit "Speichern",
+  class: "btn btn-primary",
+  data: {
+    turbo_submits_with: "Wird gespeichert...",
+    disable_with: "Bitte warten" } %>`
+
+    const expected = `<%%= form.submit "Speichern",
+                class: "btn btn-primary",
+                data: {
+                  turbo_submits_with: "Wird gespeichert...",
+                  disable_with: "Bitte warten"
+                } %>
+`
+
+    const result = await formatThorTemplate(source)
+
+    expect(result).toBe(expected)
+    expect(await formatThorTemplate(result)).toBe(expected)
+    expect(await sameRubySyntax(source, result.trimEnd())).toBe(true)
+  })
+
+  it('verändert unbekannte Formularhelfer nicht', async () => {
+    const source = `<%%= form.custom_field :name,
+  class: "form-input",
+  data: {
+    controller: "custom",
+    action: "click->custom#run" } %>`
+
+    const result = await formatThorTemplate(source)
+
+    // Unbekannte Methoden dürfen nicht durch unsere
+    // Formularformatierung verändert werden.
+    expect(result).toContain(source)
+  })
+
   describe('Ruby-Blockerkennung', () => {
     it('erkennt öffnende Ruby-Blöcke', () => {
       expect(classifyRubyBlock('<%% if @tasks.any? %>')).toBe('open')
@@ -224,8 +314,8 @@ describe('Echte b4um Generator-Templates', () => {
         continue
       }
 
-      // Ausschließlich form_with darf verändert werden.
-      expect(original).toMatch(/^<%%?=\s*form_with\b/)
+      // Nur unterstützte Rails-Formularhelfer dürfen verändert werden.
+      expect(original).toMatch(/^<%%?=\s*(?:form_with\b|form\.[a-z_]\w*\b)/)
 
       // Die Änderung muss exakt unserer Formatierung entsprechen.
       expect(formatted).toBe(await formatFormWith(original))

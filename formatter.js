@@ -16,10 +16,8 @@ async function getRubyParser() {
 }
 
 /**
- * Erkennt einen form_with-Aufruf innerhalb einer ERB-/Thor-Anweisung.
- *
- * Gibt den Ruby-Syntaxknoten zurück, wenn Prism den Aufruf
- * erfolgreich analysieren konnte.
+ * Erkennt unterstützte Rails-Formularhelfer innerhalb
+ * einer ERB-/Thor-Anweisung.
  */
 async function parseFormWith(erb) {
   const match = erb.match(/^<%%?=?\s*([\s\S]*?)\s*%>$/)
@@ -30,12 +28,14 @@ async function parseFormWith(erb) {
 
   const ruby = match[1].trim()
 
-  if (!ruby.startsWith('form_with ')) {
+  const isFormWith = ruby.startsWith('form_with ')
+  const isFormHelper = /^form\.(?:text_field|label|submit)\b/.test(ruby)
+
+  if (!isFormWith && !isFormHelper) {
     return null
   }
 
-  // Ein mit "do" geöffneter Ruby-Block benötigt
-  // für die eigenständige Analyse ein abschließendes "end".
+  // Offene Ruby-Blöcke für Prism abschließen.
   const rubySource = /\bdo(?:\s*\|[^|]*\|)?\s*$/.test(ruby) ? `${ruby}\nend` : ruby
 
   const parse = await getRubyParser()
@@ -47,7 +47,16 @@ async function parseFormWith(erb) {
 
   const call = result.value.statements.body[0]
 
-  if (call?.constructor.name !== 'CallNode' || call.name !== 'form_with') {
+  if (call?.constructor.name !== 'CallNode') {
+    return null
+  }
+
+  if (isFormWith) {
+    return call.name === 'form_with' ? call : null
+  }
+
+  // Ausschließlich Methoden auf dem Formularobjekt erkennen.
+  if (call.receiver?.constructor.name !== 'CallNode' || call.receiver.name !== 'form') {
     return null
   }
 
@@ -97,17 +106,28 @@ async function formatFormWith(erb) {
     return erb
   }
 
-  // Zunächst ausschließlich einfache Keyword-Argumente
-  // mit einem optional verschachtelten Hash unterstützen.
+  // Positionsargumente und Keyword-Argumente unterstützen.
   const argumentsNode = call.arguments_
 
-  if (!argumentsNode || argumentsNode.arguments_.length !== 1) {
+  if (!argumentsNode) {
     return erb
   }
 
-  const keywordHash = argumentsNode.arguments_[0]
+  const args = argumentsNode.arguments_
+  const isFormWith = call.name === 'form_with'
 
-  if (keywordHash.constructor.name !== 'KeywordHashNode') {
+  const keywordHash = args[args.length - 1]
+
+  if (keywordHash?.constructor.name !== 'KeywordHashNode') {
+    return erb
+  }
+
+  const positionalArgs = args.slice(0, -1)
+
+  // Nur einfache Positionsargumente unterstützen.
+  if (
+    positionalArgs.some((argument) => !['SymbolNode', 'StringNode', 'IntegerNode'].includes(argument.constructor.name))
+  ) {
     return erb
   }
 
@@ -117,25 +137,29 @@ async function formatFormWith(erb) {
     return erb
   }
 
-  const prefix = `${opening}${whitespace}form_with `
+  const methodName = isFormWith ? 'form_with' : `form.${call.name}`
+
+  const prefix = `${opening}${whitespace}${methodName} `
   const continuationIndent = ' '.repeat(prefix.length - 1)
 
-  const formattedArguments = elements.map((element, index) => {
+  const formattedArguments = [...positionalArgs.map((argument) => rubyNodeText(rubySource, argument).trim())]
+
+  for (const element of elements) {
     const key = rubyNodeText(rubySource, element.key)
     const value = element.value
 
     if (value.constructor.name === 'HashNode' && value.elements.length > 0) {
       const nestedIndent = ' '.repeat(prefix.length + 1)
 
-      const nestedArguments = value.elements.map((nested) => {
-        return `${nestedIndent}${rubyNodeText(rubySource, nested).trim()}`
-      })
+      const nestedArguments = value.elements.map(
+        (nested) => `${nestedIndent}${rubyNodeText(rubySource, nested).trim()}`
+      )
 
-      return `${key} {\n` + nestedArguments.join(',\n') + `\n${continuationIndent}}`
+      formattedArguments.push(`${key} {\n` + nestedArguments.join(',\n') + `\n${continuationIndent}}`)
+    } else {
+      formattedArguments.push(rubyNodeText(rubySource, element).trim())
     }
-
-    return rubyNodeText(rubySource, element).trim()
-  })
+  }
 
   // Den ursprünglichen Blockbeginn übernehmen,
   // ohne das für Prism ergänzte "end".

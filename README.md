@@ -2,7 +2,7 @@
 
 Syntax highlighting and formatting support for Ruby on Rails Thor generator templates in Visual Studio Code.
 
-**Version:** 0.1.2
+**Version:** 0.1.3
 
 ## Features
 
@@ -35,10 +35,12 @@ The formatter:
 - Preserves Ruby, ERB and Thor expressions.
 - Handles Ruby control structures such as `if`, `else` and `end`.
 - Supports multiline Ruby expressions.
-- Recognizes Rails form helpers such as `form_with`.
+- Supports Rails `form_with` and selected form builder helpers.
 - Formats long `form_with` calls across multiple lines.
-- Corrects indentation in multiline `form_with` arguments.
-- Formats nested keyword hashes in supported `form_with` calls.
+- Formats multiline `form.text_field`, `form.label` and `form.submit` calls.
+- Corrects indentation of positional and keyword arguments.
+- Formats nested keyword hashes in supported Rails form helpers.
+- Preserves unsupported form helpers without applying Ruby argument formatting.
 - Preserves Unicode characters, including German umlauts.
 - Uses the Prism Ruby parser to verify that formatted Ruby syntax remains unchanged.
 - Protects ERB expressions from unintended changes.
@@ -73,7 +75,40 @@ After:
 <%% end %>
 ```
 
-The Ruby syntax is checked before formatting changes are accepted.
+### Example: form.text_field Formatting
+
+Before:
+
+```erb
+<%%= form.text_field :name,
+  class: "form-input",
+  placeholder: " ",
+  required: true,
+  autofocus: true,
+  data: {
+    b4um_todo_target: "input",
+    action: "input->b4um-todo#updateSubmitState" } %>
+```
+
+After:
+
+```erb
+<%%= form.text_field :name,
+                    class: "form-input",
+                    placeholder: " ",
+                    required: true,
+                    autofocus: true,
+                    data: {
+                      b4um_todo_target: "input",
+                      action: "input->b4um-todo#updateSubmitState"
+                    } %>
+```
+
+The same formatting rules apply to supported `form.label` and `form.submit` calls.
+
+The Prism Ruby parser verifies that formatting changes preserve the original Ruby syntax.
+
+Unsupported Ruby expressions and form helpers are preserved without applying Ruby argument formatting.
 
 ## Supported File Extensions
 
@@ -90,8 +125,8 @@ Custom syntax highlighting and formatting are currently implemented for `.html.e
 
 ### Install from VSIX
 
-Download `b4um-thor-templates-0.1.2.vsix` from the
-[v0.1.2 GitHub release](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.1.2).
+Download `b4um-thor-templates-0.1.3.vsix` from the
+[v0.1.3 GitHub release](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.1.3).
 
 1. Open Visual Studio Code.
 2. Open the Extensions panel (`Cmd + Shift + X` on macOS).
@@ -104,8 +139,9 @@ The extension can then be used in a normal Visual Studio Code window; the Extens
 
 ### Visual Studio Code Marketplace
 
-The extension is not yet available on the Visual Studio Code Marketplace. Installation is currently provided through
-GitHub Releases.
+The extension is not yet available on the Visual Studio Code Marketplace.
+
+Installation is currently provided through GitHub Releases.
 
 ## Formatting
 
@@ -147,7 +183,9 @@ Open a `.html.erb.tt` file to test syntax highlighting and formatting.
 
 ## Tests
 
-The project includes **43 automated tests**. Run them with:
+The project includes **47 automated tests**.
+
+Run them with:
 
 ```bash
 npx vitest run
@@ -159,38 +197,68 @@ The test suite covers:
 - Ruby block indentation
 - Multiline Ruby expressions
 - `form_with` formatting
+- `form.text_field` formatting
+- `form.label` formatting
+- `form.submit` formatting
 - Nested Ruby hashes
+- Positional and keyword arguments
 - Unicode preservation
 - Ruby syntax verification using Prism
+- Unsupported form helper preservation
 - Malformed ERB structures
 - Formatting stability and idempotence
 
 ## Release
 
-**Current version:** 0.1.2
+**Current version:** 0.1.3
 
-### What's New in v0.1.2
+### What's New in v0.1.3
+
+Version 0.1.3 extends the Ruby formatting capabilities introduced in v0.1.2.
+
+#### Rails Form Builder Support
+
+- Added multiline formatting for `form.text_field`.
+- Added multiline formatting for `form.label`.
+- Added multiline formatting for `form.submit`.
+- Improved indentation of positional and keyword arguments.
+- Added support for nested keyword hashes in the new form helpers.
+- Preserves unsupported form helpers without applying Ruby argument formatting.
+
+#### Safety and Reliability
+
+- Uses Prism to verify that formatting preserves Ruby syntax.
+- Maintains compatibility with existing `form_with` formatting.
+- Preserves Unicode characters.
+- Ensures stable formatting across repeated runs.
+- Expanded automated test coverage to 47 tests.
+
+### Previous Release: v0.1.2
+
+Version 0.1.2 introduced:
 
 - Automatic formatting of long `form_with` calls.
 - Improved indentation of multiline Ruby arguments.
-- Formatting of nested keyword hashes in supported `form_with` calls.
+- Formatting of nested keyword hashes.
 - Unicode-safe Ruby source extraction.
 - Ruby syntax verification using Prism.
-- Additional automated tests, bringing the total to 43.
+- 43 automated tests.
 
-### Previous Release: v0.1.1
+The previous release is available from the
+[v0.1.2 GitHub release](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.1.2).
 
-Version 0.1.1 improved multiline ERB whitespace handling while preserving Ruby strings, heredocs and existing ERB safety
-checks.
+### Download
 
 Download the latest version from the
-[v0.1.2 GitHub release](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.1.2).
+[v0.1.3 GitHub release](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.1.3).
 
 ## Status
 
-b4um Thor Templates is currently under development.
+b4um Thor Templates is under active development.
 
-Version 0.1.2 is available as source code on GitHub. An installable VSIX package is being prepared.
+Version 0.1.3 is the current release version.
+
+The extension is distributed as an installable VSIX package through GitHub Releases.
 
 The extension is not yet published to the Visual Studio Code Marketplace.
 
