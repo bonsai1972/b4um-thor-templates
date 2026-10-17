@@ -1,0 +1,21 @@
+# Git
+.git/
+.gitignore
+
+# VS Code development
+.vscode/
+.vscode-test/
+
+# Tests and fixtures
+formatter.test.js
+fixtures/
+
+# Development files
+coverage/
+*.log
+
+# Previously generated packages
+*.vsix
+
+# Package manager files
+package-lock.json
