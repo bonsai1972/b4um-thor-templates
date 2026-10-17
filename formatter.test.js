@@ -93,11 +93,11 @@ describe('b4um Thor Formatter', () => {
 <%% end %>`
 
     const expected = `<%%= form_with model: @task,
-              data: {
+               data: {
                 controller: "b4um-todo",
                 action: "turbo:submit-end->b4um-todo#resetAfterSuccess"
-              },
-              class: "task-form" do |form| %>
+               },
+               class: "task-form" do |form| %>
   <div></div>
 <%% end %>
 `
@@ -118,11 +118,11 @@ class: "task-form" do |form| %>
 <%% end %>`
 
     const expected = `<%%= form_with model: @task,
-              data: {
+               data: {
                 controller: "b4um-todo",
                 action: "turbo:submit-end->b4um-todo#resetAfterSuccess"
-              },
-              class: "task-form" do |form| %>
+               },
+               class: "task-form" do |form| %>
   <div></div>
 <%% end %>
 `
@@ -141,12 +141,12 @@ class: "task-form" do |form| %>
 <%% end %>`
 
     const expected = `<%%= form_with model: @task,
-              data: {
+               data: {
                 title: "Schöne Grüße",
                 controller: "b4um-todo",
                 action: "turbo:submit-end->b4um-todo#resetAfterSuccess"
-              },
-              class: "task-form" do |form| %>
+               },
+               class: "task-form" do |form| %>
   <div></div>
 <%% end %>
 `
@@ -177,14 +177,14 @@ class: "task-form" do |form| %>
     action: "input->b4um-todo#updateSubmitState" } %>`
 
     const expected = `<%%= form.text_field :name,
-                    class: "form-input",
-                    placeholder: " ",
-                    required: true,
-                    autofocus: true,
-                    data: {
+                     class: "form-input",
+                     placeholder: " ",
+                     required: true,
+                     autofocus: true,
+                     data: {
                       b4um_todo_target: "input",
                       action: "input->b4um-todo#updateSubmitState"
-                    } %>
+                     } %>
 `
 
     const result = await formatThorTemplate(source)
@@ -198,6 +198,21 @@ class: "task-form" do |form| %>
     expect(await sameRubySyntax(source, result.trimEnd())).toBe(true)
   })
 
+  it('formatiert einzeilige form.label-Argumente mehrzeilig', async () => {
+    const source = `<%%= form.label :name, "Was möchtest du erledigen?", class: "form-label" %>`
+
+    const expected = `<%%= form.label :name,
+                "Was möchtest du erledigen?",
+                class: "form-label" %>
+`
+
+    const result = await formatThorTemplate(source)
+
+    expect(result).toBe(expected)
+    expect(await formatThorTemplate(result)).toBe(expected)
+    expect(await sameRubySyntax(source, result.trimEnd())).toBe(true)
+  })
+
   it('formatiert mehrzeilige form.label-Argumente', async () => {
     const source = `<%%= form.label :name,
   class: "form-label",
@@ -206,11 +221,28 @@ class: "task-form" do |form| %>
     action: "click->tooltip#show" } %>`
 
     const expected = `<%%= form.label :name,
-               class: "form-label",
-               data: {
+                class: "form-label",
+                data: {
                  controller: "tooltip",
                  action: "click->tooltip#show"
-               } %>
+                } %>
+`
+
+    const result = await formatThorTemplate(source)
+
+    expect(result).toBe(expected)
+    expect(await formatThorTemplate(result)).toBe(expected)
+    expect(await sameRubySyntax(source, result.trimEnd())).toBe(true)
+  })
+
+  it('formatiert einzeilige form.submit-Argumente mehrzeilig', async () => {
+    const source = `<%%= form.submit "Hinzufügen", class: "b4um-todo__button", data: { b4um_todo_target: "submit" } %>`
+
+    const expected = `<%%= form.submit "Hinzufügen",
+                 class: "b4um-todo__button",
+                 data: {
+                  b4um_todo_target: "submit"
+                 } %>
 `
 
     const result = await formatThorTemplate(source)
@@ -228,12 +260,31 @@ class: "task-form" do |form| %>
     disable_with: "Bitte warten" } %>`
 
     const expected = `<%%= form.submit "Speichern",
-                class: "btn btn-primary",
-                data: {
+                 class: "btn btn-primary",
+                 data: {
                   turbo_submits_with: "Wird gespeichert...",
                   disable_with: "Bitte warten"
-                } %>
+                 } %>
 `
+
+    const result = await formatThorTemplate(source)
+
+    expect(result).toBe(expected)
+    expect(await formatThorTemplate(result)).toBe(expected)
+    expect(await sameRubySyntax(source, result.trimEnd())).toBe(true)
+  })
+
+  it('formatiert einzeilige render partial-Argumente mehrzeilig', async () => {
+    const source = `<%%= render partial: "task", collection: @incomplete_tasks, as: :task %>`
+
+    const indent = ' '.repeat(12)
+
+    const expected = [
+      '<%%= render partial: "task",',
+      `${indent}collection: @incomplete_tasks,`,
+      `${indent}as: :task %>`,
+      ''
+    ].join('\n')
 
     const result = await formatThorTemplate(source)
 
@@ -314,11 +365,30 @@ describe('Echte b4um Generator-Templates', () => {
         continue
       }
 
-      // Nur unterstützte Rails-Formularhelfer dürfen verändert werden.
-      expect(original).toMatch(/^<%%?=\s*(?:form_with\b|form\.[a-z_]\w*\b)/)
+      // Nur unterstützte Rails-Formularhelfer und render partial dürfen verändert werden.
+      expect(original).toMatch(/^<%%?=\s*(?:form_with\b|form\.(?:text_field|label|submit)\b|render\s+partial\s*:)/)
 
-      // Die Änderung muss exakt unserer Formatierung entsprechen.
-      expect(formatted).toBe(await formatFormWith(original))
+      // Die Änderung muss unserer Formatierung entsprechen.
+      // Zusätzliche HTML-Einrückung ist bei Folgezeilen erlaubt.
+      const expected = await formatFormWith(original)
+
+      const expectedLines = expected.split('\n')
+      const formattedLines = formatted.split('\n')
+
+      expect(formattedLines).toHaveLength(expectedLines.length)
+      expect(formattedLines[0]).toBe(expectedLines[0])
+
+      const indentationOffsets = formattedLines.slice(1).map((line, index) => {
+        const expectedLine = expectedLines[index + 1]
+
+        expect(line.trimStart()).toBe(expectedLine.trimStart())
+
+        return line.length - line.trimStart().length - (expectedLine.length - expectedLine.trimStart().length)
+      })
+
+      // Alle Folgezeilen müssen dieselbe zusätzliche Einrückung erhalten.
+      expect(new Set(indentationOffsets).size).toBe(1)
+      expect(indentationOffsets[0]).toBeGreaterThanOrEqual(0)
 
       // Die Ruby-Syntax muss unverändert bleiben.
       expect(await sameRubySyntax(original, formatted)).toBe(true)
@@ -668,6 +738,7 @@ describe('Mehrzeilige form_with-Anweisungen', () => {
     expect(result).toContain('<%% end %>')
   })
 })
+
 describe('Leerzeichen in mehrzeiligen ERB-Anweisungen', () => {
   it('entfernt überflüssige Leerzeichen am Zeilenende', async () => {
     const source = `<section>

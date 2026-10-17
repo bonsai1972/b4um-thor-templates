@@ -30,8 +30,9 @@ async function parseFormWith(erb) {
 
   const isFormWith = ruby.startsWith('form_with ')
   const isFormHelper = /^form\.(?:text_field|label|submit)\b/.test(ruby)
+  const isRenderPartial = /^render\s+partial\s*:/.test(ruby)
 
-  if (!isFormWith && !isFormHelper) {
+  if (!isFormWith && !isFormHelper && !isRenderPartial) {
     return null
   }
 
@@ -55,8 +56,17 @@ async function parseFormWith(erb) {
     return call.name === 'form_with' ? call : null
   }
 
-  // Ausschließlich Methoden auf dem Formularobjekt erkennen.
-  if (call.receiver?.constructor.name !== 'CallNode' || call.receiver.name !== 'form') {
+  // Nur render-Aufrufe mit dem Keyword partial unterstützen.
+  if (isRenderPartial) {
+    return call.name === 'render' && !call.receiver ? call : null
+  }
+
+  // Ausschließlich unterstützte Methoden auf dem Formularobjekt erkennen.
+  if (
+    !['text_field', 'label', 'submit'].includes(call.name) ||
+    call.receiver?.constructor.name !== 'CallNode' ||
+    call.receiver.name !== 'form'
+  ) {
     return null
   }
 
@@ -101,8 +111,9 @@ async function formatFormWith(erb) {
   // Derselbe Ruby-Text, den parseFormWith() an Prism übergibt.
   const rubySource = ruby.trim()
 
-  // Kurze, einzeilige Aufrufe nicht verändern.
-  if (!ruby.includes('\n') && erb.length <= 100) {
+  // form_with nur bei langen oder bereits mehrzeiligen Aufrufen formatieren.
+  // Unterstützte Formularhelfer dürfen auch kurze einzeilige Aufrufe umbrechen.
+  if (call.name === 'form_with' && !ruby.includes('\n') && erb.length <= 100) {
     return erb
   }
 
@@ -133,14 +144,15 @@ async function formatFormWith(erb) {
 
   const elements = keywordHash.elements
 
-  if (elements.length < 2) {
+  // form_with und render partial: ab zwei Keyword-Argumenten formatieren.
+  // Bei Formularhelfern reicht bereits ein Keyword-Argument.
+  if (elements.length < (isFormWith || call.name === 'render' ? 2 : 1)) {
     return erb
   }
 
-  const methodName = isFormWith ? 'form_with' : `form.${call.name}`
-
+  const methodName = isFormWith ? 'form_with' : call.name === 'render' ? 'render' : `form.${call.name}`
   const prefix = `${opening}${whitespace}${methodName} `
-  const continuationIndent = ' '.repeat(prefix.length - 1)
+  const continuationIndent = ' '.repeat(prefix.length)
 
   const formattedArguments = [...positionalArgs.map((argument) => rubyNodeText(rubySource, argument).trim())]
 
@@ -491,7 +503,7 @@ function indentRubyBlocks(source) {
     // Fortsetzung einer mehrzeiligen ERB-Anweisung.
     // Diese Zeilen dürfen nicht verändert werden.
     if (insideMultilineErb) {
-      result.push(line)
+      result.push(multilineErbIndent + line)
 
       // Weitere Zeile der mehrzeiligen ERB-Anweisung sammeln.
       multilineErbText += '\n' + line
@@ -527,6 +539,8 @@ function indentRubyBlocks(source) {
     if (startsErb && !endsErb) {
       insideMultilineErb = true
       multilineErbText = line
+
+      multilineErbIndent = /^<%%?=\s*form\.(?:text_field|label|submit)\b/.test(trimmed) ? '  '.repeat(rubyDepth) : ''
 
       const extraIndent = '  '.repeat(rubyDepth)
       result.push(extraIndent + line)
@@ -684,7 +698,44 @@ async function formatThorTemplate(source) {
     }
 
     if (matches.length === 1) {
-      restored = restored.replace(placeholder, protectedBlocks[index])
+      restored = restored.replace(placeholder, (match, offset, source) => {
+        const block = protectedBlocks[index]
+
+        // Nur von unserem Formatter erzeugte Zeilen zusätzlich einrücken.
+        const originalBlock = erbBlocks[index].text
+
+        if (block === originalBlock || !block.includes('\n')) {
+          return block
+        }
+
+        const lineStart = source.lastIndexOf('\n', offset - 1) + 1
+        const linePrefix = source.slice(lineStart, offset)
+        const indentation = /^[ \t]*$/.test(linePrefix) ? linePrefix : ''
+
+        const lines = block.split('\n')
+
+        const firstLine = lines[0]
+        const firstArgument = firstLine.match(/^(<%%?=\s*(?:form_with|form\.(?:text_field|label|submit)|render)\s+)/)
+
+        if (!firstArgument) {
+          return block
+        }
+
+        const targetColumn = indentation.length + firstArgument[1].length
+
+        return [
+          firstLine,
+          ...lines.slice(1).map((line) => {
+            const content = line.trimStart()
+            const originalIndent = line.length - content.length
+
+            // Die vorhandene relative Einrückung beibehalten.
+            const relativeIndent = originalIndent - firstArgument[1].length
+
+            return ' '.repeat(Math.max(0, targetColumn + relativeIndent)) + content
+          })
+        ].join('\n')
+      })
     } else {
       restored = restored.replace(attributePlaceholder, protectedBlocks[index])
     }
@@ -725,7 +776,25 @@ async function formatThorTemplate(source) {
     // form_with-Formatierung erzeugt hat.
     const expected = await formatFormWith(original)
 
-    if (expected !== result) {
+    // Zusätzliche HTML-Einrückung nur bei unterstützten
+    // und tatsächlich formatierten Ruby-Anweisungen erlauben.
+    let expectedWithIndentation = expected
+
+    if (expected !== original && expected.includes('\n')) {
+      const resultLines = result.split('\n')
+      const expectedLines = expected.split('\n')
+
+      const firstExpectedContinuation = expectedLines[1].match(/^[ \t]*/)[0]
+      const firstResultContinuation = resultLines[1]?.match(/^[ \t]*/)?.[0] ?? ''
+
+      if (firstResultContinuation.startsWith(firstExpectedContinuation)) {
+        const extraIndentation = firstResultContinuation.slice(firstExpectedContinuation.length)
+
+        expectedWithIndentation = expected.replace(/\n/g, `\n${extraIndentation}`)
+      }
+    }
+
+    if (expectedWithIndentation !== result) {
       throw new Error(`Thor-/ERB-Anweisung ${index} wurde unerwartet verändert. Formatierung abgebrochen.`)
     }
 
