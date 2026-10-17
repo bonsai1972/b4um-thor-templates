@@ -1,0 +1,75 @@
+{
+  "name": "b4um-thor-templates",
+  "displayName": "b4um Thor Templates",
+  "description": "Syntax highlighting for Ruby on Rails Thor generator templates.",
+  "version": "0.1.0",
+  "publisher": "b4um",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "main": "./extension.js",
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "b4um-thor-erb",
+        "aliases": [
+          "b4um Thor ERB",
+          "Thor ERB"
+        ],
+        "extensions": [
+          ".html.erb.tt"
+        ],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "b4um-thor-ruby",
+        "aliases": [
+          "b4um Thor Ruby",
+          "Thor Ruby"
+        ],
+        "extensions": [
+          ".rb.tt"
+        ],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "b4um-thor-javascript",
+        "aliases": [
+          "b4um Thor JavaScript",
+          "Thor JavaScript"
+        ],
+        "extensions": [
+          ".js.tt"
+        ],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "b4um-thor-css",
+        "aliases": [
+          "b4um Thor CSS",
+          "Thor CSS"
+        ],
+        "extensions": [
+          ".css.tt"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "b4um-thor-erb",
+        "scopeName": "text.html.erb.thor",
+        "path": "./syntaxes/thor-erb.tmLanguage.json"
+      }
+    ]
+  },
+  "dependencies": {
+    "prettier": "^3.9.10"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.5"
+  }
+}

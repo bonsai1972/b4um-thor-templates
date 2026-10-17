@@ -1,0 +1,58 @@
+{
+  "name": "b4um Thor ERB",
+  "scopeName": "text.html.erb.thor",
+  "patterns": [
+    {
+      "include": "#thor-erb"
+    },
+    {
+      "include": "text.html.basic"
+    }
+  ],
+  "repository": {
+    "thor-erb": {
+      "patterns": [
+        {
+          "name": "meta.embedded.block.ruby.thor",
+          "begin": "<%%=?",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.section.embedded.begin.erb"
+            }
+          },
+          "end": "%>",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.section.embedded.end.erb"
+            }
+          },
+          "patterns": [
+            {
+              "include": "source.ruby"
+            }
+          ]
+        },
+        {
+          "name": "meta.embedded.block.ruby.erb",
+          "begin": "<%=?",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.section.embedded.begin.erb"
+            }
+          },
+          "end": "%>",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.section.embedded.end.erb"
+            }
+          },
+          "patterns": [
+            {
+              "include": "source.ruby"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

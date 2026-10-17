@@ -1,0 +1,21 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# macOS
+.DS_Store
+.AppleDouble
+
+# Temporäre Dateien
+*.log
+*.tmp
+*.swp
+*~
+
+# Testabdeckung
+coverage/
+
+# VS Code
+.vscode-test/

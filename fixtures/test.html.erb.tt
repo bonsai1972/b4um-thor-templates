@@ -1,0 +1,9 @@
+<div class="container">
+<h1>Meine Aufgaben</h1>
+<%%= render "progress" %>
+<ul>
+<%% @tasks.each do |task| %>
+<li><%%= task.title %></li>
+<%% end %>
+</ul>
+</div>
