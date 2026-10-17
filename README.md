@@ -2,7 +2,7 @@
 
 Syntax highlighting and formatting support for Ruby on Rails Thor generator templates in Visual Studio Code.
 
-**Version:** 0.1.1
+**Version:** 0.1.2
 
 ## Features
 
@@ -36,12 +36,44 @@ The formatter:
 - Handles Ruby control structures such as `if`, `else` and `end`.
 - Supports multiline Ruby expressions.
 - Recognizes Rails form helpers such as `form_with`.
+- Formats long `form_with` calls across multiple lines.
+- Corrects indentation in multiline `form_with` arguments.
+- Formats nested keyword hashes in supported `form_with` calls.
+- Preserves Unicode characters, including German umlauts.
+- Uses the Prism Ruby parser to verify that formatted Ruby syntax remains unchanged.
 - Protects ERB expressions from unintended changes.
 - Detects several malformed ERB and Ruby block structures.
 - Supports Ruby block indentation.
 
-Multiline Ruby expressions retain their original structure and indentation. Trailing whitespace is removed from Ruby
-code lines while whitespace inside quoted Ruby strings is preserved.
+The formatter preserves Ruby expressions that cannot be safely reformatted.
+
+Trailing whitespace is removed from Ruby code lines while whitespace inside quoted Ruby strings and heredocs is
+preserved.
+
+### Example: form_with Formatting
+
+Before:
+
+```erb
+<%%= form_with model: @task, data: { controller: "b4um-todo", action: "turbo:submit-end->b4um-todo#resetAfterSuccess" }, class: "task-form" do |form| %>
+<div></div>
+<%% end %>
+```
+
+After:
+
+```erb
+<%%= form_with model: @task,
+              data: {
+                controller: "b4um-todo",
+                action: "turbo:submit-end->b4um-todo#resetAfterSuccess"
+              },
+              class: "task-form" do |form| %>
+  <div></div>
+<%% end %>
+```
+
+The Ruby syntax is checked before formatting changes are accepted.
 
 ## Supported File Extensions
 
@@ -58,8 +90,8 @@ Custom syntax highlighting and formatting are currently implemented for `.html.e
 
 ### Install from VSIX
 
-Download `b4um-thor-templates-0.1.1.vsix` from the
-[v0.1.1 GitHub release](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.1.1).
+Download `b4um-thor-templates-0.1.2.vsix` from the
+[v0.1.2 GitHub release](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.1.2).
 
 1. Open Visual Studio Code.
 2. Open the Extensions panel (`Cmd + Shift + X` on macOS).
@@ -83,9 +115,9 @@ Open the Command Palette (`Cmd + Shift + P` on macOS) and select:
 
 **Format Document With... → b4um Thor Formatter**
 
-The formatter processes the HTML structure while preserving Thor and Ruby expressions.
+The formatter processes HTML structure and supported Ruby expressions while protecting the original Ruby syntax.
 
-Automatic formatting on save is not enabled by default. Manual formatting is recommended for this initial release.
+Automatic formatting on save is not enabled by default. Manual formatting is recommended.
 
 ## Development
 
@@ -115,34 +147,52 @@ Open a `.html.erb.tt` file to test syntax highlighting and formatting.
 
 ## Tests
 
-The project includes 40 automated tests. Run them with:
+The project includes **43 automated tests**. Run them with:
 
 ```bash
 npx vitest run
 ```
 
-The test suite covers Thor syntax preservation, Ruby block indentation, multiline expressions, malformed ERB structures,
-and formatting stability.
+The test suite covers:
+
+- Thor syntax preservation
+- Ruby block indentation
+- Multiline Ruby expressions
+- `form_with` formatting
+- Nested Ruby hashes
+- Unicode preservation
+- Ruby syntax verification using Prism
+- Malformed ERB structures
+- Formatting stability and idempotence
 
 ## Release
 
-**Current version:** 0.1.1
+**Current version:** 0.1.2
 
-Version 0.1.1 improves multiline ERB whitespace handling while preserving Ruby strings, heredocs and the existing ERB
-safety checks.
+### What's New in v0.1.2
 
-The extension includes Thor ERB syntax highlighting, a custom HTML formatter, Ruby block indentation, multiline
-expression support and 40 automated tests.
+- Automatic formatting of long `form_with` calls.
+- Improved indentation of multiline Ruby arguments.
+- Formatting of nested keyword hashes in supported `form_with` calls.
+- Unicode-safe Ruby source extraction.
+- Ruby syntax verification using Prism.
+- Additional automated tests, bringing the total to 43.
+
+### Previous Release: v0.1.1
+
+Version 0.1.1 improved multiline ERB whitespace handling while preserving Ruby strings, heredocs and existing ERB safety
+checks.
 
 Download the latest version from the
-[v0.1.1 GitHub release](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.1.1).
+[v0.1.2 GitHub release](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.1.2).
 
 ## Status
 
 b4um Thor Templates is currently under development.
 
-Version 0.1.1 is available as source code and as an installable VSIX package on GitHub. The extension is not yet
-published to the Visual Studio Code Marketplace.
+Version 0.1.2 is available as source code on GitHub. An installable VSIX package is being prepared.
+
+The extension is not yet published to the Visual Studio Code Marketplace.
 
 ## License
 
