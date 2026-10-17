@@ -3,7 +3,7 @@ import formatter from './formatter.js'
 import fs from 'node:fs'
 import path from 'node:path'
 
-const { formatThorTemplate, classifyRubyBlock, indentRubyBlocks } = formatter
+const { formatThorTemplate, classifyRubyBlock, indentRubyBlocks, formatFormWith, sameRubySyntax } = formatter
 
 describe('b4um Thor Formatter', () => {
   it('rückt HTML korrekt ein', async () => {
@@ -87,6 +87,85 @@ describe('b4um Thor Formatter', () => {
     expect(result).toBe(expected)
   })
 
+  it('formatiert lange form_with-Argumente über mehrere Zeilen', async () => {
+    const source = `<%%= form_with model: @task, data: { controller: "b4um-todo", action: "turbo:submit-end->b4um-todo#resetAfterSuccess" }, class: "task-form" do |form| %>
+<div></div>
+<%% end %>`
+
+    const expected = `<%%= form_with model: @task,
+              data: {
+                controller: "b4um-todo",
+                action: "turbo:submit-end->b4um-todo#resetAfterSuccess"
+              },
+              class: "task-form" do |form| %>
+  <div></div>
+<%% end %>
+`
+
+    const result = await formatThorTemplate(source)
+
+    expect(result).toBe(expected)
+  })
+
+  it('korrigiert falsch eingerückte mehrzeilige form_with-Argumente', async () => {
+    const source = `<%%= form_with model: @task,
+data: {
+controller: "b4um-todo",
+action: "turbo:submit-end->b4um-todo#resetAfterSuccess"
+},
+class: "task-form" do |form| %>
+<div></div>
+<%% end %>`
+
+    const expected = `<%%= form_with model: @task,
+              data: {
+                controller: "b4um-todo",
+                action: "turbo:submit-end->b4um-todo#resetAfterSuccess"
+              },
+              class: "task-form" do |form| %>
+  <div></div>
+<%% end %>
+`
+
+    const result = await formatThorTemplate(source)
+
+    expect(result).toBe(expected)
+
+    // Auch beim erneuten Formatieren darf sich nichts ändern.
+    expect(await formatThorTemplate(result)).toBe(expected)
+  })
+
+  it('erhält Unicode-Zeichen beim Formatieren von form_with', async () => {
+    const source = `<%%= form_with model: @task, data: { title: "Schöne Grüße", controller: "b4um-todo", action: "turbo:submit-end->b4um-todo#resetAfterSuccess" }, class: "task-form" do |form| %>
+<div></div>
+<%% end %>`
+
+    const expected = `<%%= form_with model: @task,
+              data: {
+                title: "Schöne Grüße",
+                controller: "b4um-todo",
+                action: "turbo:submit-end->b4um-todo#resetAfterSuccess"
+              },
+              class: "task-form" do |form| %>
+  <div></div>
+<%% end %>
+`
+
+    const result = await formatThorTemplate(source)
+
+    // Unicode-Zeichen müssen vollständig erhalten bleiben.
+    expect(result).toBe(expected)
+
+    // Die Ruby-Syntax muss unverändert sein.
+    const originalErb = source.match(/<%%?[\s\S]*?%>/)[0]
+    const formattedErb = result.match(/<%%?[\s\S]*?%>/)[0]
+
+    expect(await sameRubySyntax(originalErb, formattedErb)).toBe(true)
+
+    // Wiederholtes Formatieren darf nichts verändern.
+    expect(await formatThorTemplate(result)).toBe(expected)
+  })
+
   describe('Ruby-Blockerkennung', () => {
     it('erkennt öffnende Ruby-Blöcke', () => {
       expect(classifyRubyBlock('<%% if @tasks.any? %>')).toBe('open')
@@ -122,7 +201,7 @@ describe('b4um Thor Formatter', () => {
 })
 
 describe('Echte b4um Generator-Templates', () => {
-  it('erhält alle Thor-Anweisungen im Todo-Template', async () => {
+  it('erhält alle Thor-Anweisungen außer erlaubten form_with-Formatierungen', async () => {
     const filePath = path.join(process.cwd(), 'fixtures', 'todo-index.html.erb.tt')
 
     const source = fs.readFileSync(filePath, 'utf8')
@@ -133,7 +212,27 @@ describe('Echte b4um Generator-Templates', () => {
 
     const formattedBlocks = result.match(/<%%?[\s\S]*?%>/g) || []
 
-    expect(formattedBlocks).toEqual(originalBlocks)
+    // Es dürfen keine Thor-Anweisungen verloren gehen
+    // oder zusätzlich entstehen.
+    expect(formattedBlocks).toHaveLength(originalBlocks.length)
+
+    for (let index = 0; index < originalBlocks.length; index++) {
+      const original = originalBlocks[index]
+      const formatted = formattedBlocks[index]
+
+      if (original === formatted) {
+        continue
+      }
+
+      // Ausschließlich form_with darf verändert werden.
+      expect(original).toMatch(/^<%%?=\s*form_with\b/)
+
+      // Die Änderung muss exakt unserer Formatierung entsprechen.
+      expect(formatted).toBe(await formatFormWith(original))
+
+      // Die Ruby-Syntax muss unverändert bleiben.
+      expect(await sameRubySyntax(original, formatted)).toBe(true)
+    }
   })
 })
 

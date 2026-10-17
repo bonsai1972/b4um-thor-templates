@@ -1,4 +1,227 @@
 const prettier = require('prettier')
+const { loadPrism } = require('@ruby/prism')
+
+// Ruby-Parser einmalig initialisieren und wiederverwenden.
+let prismParserPromise = null
+
+async function getRubyParser() {
+  if (!prismParserPromise) {
+    prismParserPromise = loadPrism().catch((error) => {
+      prismParserPromise = null
+      throw error
+    })
+  }
+
+  return prismParserPromise
+}
+
+/**
+ * Erkennt einen form_with-Aufruf innerhalb einer ERB-/Thor-Anweisung.
+ *
+ * Gibt den Ruby-Syntaxknoten zurück, wenn Prism den Aufruf
+ * erfolgreich analysieren konnte.
+ */
+async function parseFormWith(erb) {
+  const match = erb.match(/^<%%?=?\s*([\s\S]*?)\s*%>$/)
+
+  if (!match) {
+    return null
+  }
+
+  const ruby = match[1].trim()
+
+  if (!ruby.startsWith('form_with ')) {
+    return null
+  }
+
+  // Ein mit "do" geöffneter Ruby-Block benötigt
+  // für die eigenständige Analyse ein abschließendes "end".
+  const rubySource = /\bdo(?:\s*\|[^|]*\|)?\s*$/.test(ruby) ? `${ruby}\nend` : ruby
+
+  const parse = await getRubyParser()
+  const result = parse(rubySource)
+
+  if (result.errors.length > 0) {
+    return null
+  }
+
+  const call = result.value.statements.body[0]
+
+  if (call?.constructor.name !== 'CallNode' || call.name !== 'form_with') {
+    return null
+  }
+
+  return call
+}
+
+/**
+ * Liest den Originaltext eines Prism-Knotens aus.
+ */
+function rubyNodeText(source, node) {
+  const start = node.location.startOffset
+  const end = start + node.location.length
+
+  // Prism verwendet UTF-8-Bytepositionen.
+  // Deshalb den Originaltext ebenfalls als UTF-8 behandeln.
+  const buffer = Buffer.from(source, 'utf8')
+
+  return buffer.subarray(start, end).toString('utf8')
+}
+
+/**
+ * Formatiert lange form_with-Aufrufe mit Keyword-Argumenten.
+ *
+ * Bestehende Ruby-Ausdrücke werden aus dem Originalcode
+ * übernommen. Nur die Anordnung wird verändert.
+ */
+async function formatFormWith(erb) {
+  const call = await parseFormWith(erb)
+
+  if (!call) {
+    return erb
+  }
+
+  const match = erb.match(/^(<%%?=)(\s*)([\s\S]*?)(\s*%>)$/)
+
+  if (!match) {
+    return erb
+  }
+
+  const [, opening, whitespace, ruby, closing] = match
+
+  // Derselbe Ruby-Text, den parseFormWith() an Prism übergibt.
+  const rubySource = ruby.trim()
+
+  // Kurze, einzeilige Aufrufe nicht verändern.
+  if (!ruby.includes('\n') && erb.length <= 100) {
+    return erb
+  }
+
+  // Zunächst ausschließlich einfache Keyword-Argumente
+  // mit einem optional verschachtelten Hash unterstützen.
+  const argumentsNode = call.arguments_
+
+  if (!argumentsNode || argumentsNode.arguments_.length !== 1) {
+    return erb
+  }
+
+  const keywordHash = argumentsNode.arguments_[0]
+
+  if (keywordHash.constructor.name !== 'KeywordHashNode') {
+    return erb
+  }
+
+  const elements = keywordHash.elements
+
+  if (elements.length < 2) {
+    return erb
+  }
+
+  const prefix = `${opening}${whitespace}form_with `
+  const continuationIndent = ' '.repeat(prefix.length - 1)
+
+  const formattedArguments = elements.map((element, index) => {
+    const key = rubyNodeText(rubySource, element.key)
+    const value = element.value
+
+    if (value.constructor.name === 'HashNode' && value.elements.length > 0) {
+      const nestedIndent = ' '.repeat(prefix.length + 1)
+
+      const nestedArguments = value.elements.map((nested) => {
+        return `${nestedIndent}${rubyNodeText(rubySource, nested).trim()}`
+      })
+
+      return `${key} {\n` + nestedArguments.join(',\n') + `\n${continuationIndent}}`
+    }
+
+    return rubyNodeText(rubySource, element).trim()
+  })
+
+  // Den ursprünglichen Blockbeginn übernehmen,
+  // ohne das für Prism ergänzte "end".
+  const blockMatch = rubySource.match(/\s+(do(?:\s*\|[^|]*\|)?)\s*$/)
+  const blockSuffix = call.block && blockMatch ? blockMatch[1] : ''
+
+  const first = formattedArguments[0]
+  const remaining = formattedArguments.slice(1)
+
+  let result = prefix + first
+
+  for (const argument of remaining) {
+    result += `,\n${continuationIndent}${argument}`
+  }
+
+  if (blockSuffix) {
+    result += ` ${blockSuffix}`
+  }
+
+  return result + closing
+}
+
+/**
+ * Prüft, ob zwei Ruby-Anweisungen dieselbe Syntaxstruktur besitzen.
+ *
+ * Die Prüfung berücksichtigt keine Einrückungen oder Zeilenumbrüche.
+ */
+async function sameRubySyntax(originalErb, formattedErb) {
+  function extractRuby(erb) {
+    const match = erb.match(/^<%%?=?\s*([\s\S]*?)\s*%>$/)
+
+    if (!match) {
+      return null
+    }
+
+    const ruby = match[1].trim()
+
+    // Offene Ruby-Blöcke für Prism abschließen.
+    return /\bdo(?:\s*\|[^|]*\|)?\s*$/.test(ruby) ? `${ruby}\nend` : ruby
+  }
+
+  const originalRuby = extractRuby(originalErb)
+  const formattedRuby = extractRuby(formattedErb)
+
+  if (originalRuby === null || formattedRuby === null) {
+    return false
+  }
+
+  const parse = await getRubyParser()
+
+  const originalResult = parse(originalRuby)
+  const formattedResult = parse(formattedRuby)
+
+  if (originalResult.errors.length > 0 || formattedResult.errors.length > 0) {
+    return false
+  }
+
+  // Syntaxbaum ohne Positionsangaben vergleichen.
+  function normalizeAst(node) {
+    if (Array.isArray(node)) {
+      return node.map(normalizeAst)
+    }
+
+    if (node !== null && typeof node === 'object') {
+      const normalized = {}
+
+      for (const [key, value] of Object.entries(node)) {
+        // Positionsangaben hängen von der Formatierung ab.
+        if (key === 'location' || key.endsWith('Loc')) {
+          continue
+        }
+
+        normalized[key] = normalizeAst(value)
+      }
+
+      return normalized
+    }
+
+    return node
+  }
+
+  const originalAst = normalizeAst(originalResult.value)
+  const formattedAst = normalizeAst(formattedResult.value)
+
+  return JSON.stringify(originalAst) === JSON.stringify(formattedAst)
+}
 
 /**
  * Findet ERB-/Thor-Anweisungen und berücksichtigt
@@ -364,8 +587,21 @@ async function formatThorTemplate(source) {
     // ERB-Zeilen entfernen.
     const cleanedBlock = block.text.includes('\n') ? cleanErbTrailingWhitespace(block.text) : block.text
 
-    // Die bereinigte ERB-Anweisung geschützt speichern.
-    protectedBlocks.push(parenthesized ? `(${cleanedBlock})` : cleanedBlock)
+    // Lange form_with-Anweisungen mit Prism formatieren.
+    let formattedBlock = cleanedBlock
+
+    const candidate = await formatFormWith(cleanedBlock)
+
+    if (candidate !== cleanedBlock) {
+      // Änderungen nur übernehmen, wenn die Ruby-Syntax
+      // nach der Formatierung unverändert bleibt.
+      if (await sameRubySyntax(cleanedBlock, candidate)) {
+        formattedBlock = candidate
+      }
+    }
+
+    // Die ERB-Anweisung geschützt speichern.
+    protectedBlocks.push(parenthesized ? `(${formattedBlock})` : formattedBlock)
 
     // Prüfen, ob wir uns innerhalb eines HTML-Attributs befinden.
     const lastTagStart = protectedSource.lastIndexOf('<')
@@ -448,8 +684,31 @@ async function formatThorTemplate(source) {
 
   const resultBlocks = findErbBlocks(indented).map((block) => block.text)
 
-  if (JSON.stringify(originalBlocks) !== JSON.stringify(resultBlocks)) {
-    throw new Error('Die Thor-/ERB-Anweisungen wurden verändert. Formatierung abgebrochen.')
+  if (originalBlocks.length !== resultBlocks.length) {
+    throw new Error('Die Anzahl der Thor-/ERB-Anweisungen wurde verändert. Formatierung abgebrochen.')
+  }
+
+  for (let index = 0; index < originalBlocks.length; index++) {
+    const original = originalBlocks[index]
+    const result = resultBlocks[index]
+
+    // Unveränderte ERB-Anweisungen wie bisher akzeptieren.
+    if (original === result) {
+      continue
+    }
+
+    // Nur Änderungen akzeptieren, die unsere eigene
+    // form_with-Formatierung erzeugt hat.
+    const expected = await formatFormWith(original)
+
+    if (expected !== result) {
+      throw new Error(`Thor-/ERB-Anweisung ${index} wurde unerwartet verändert. Formatierung abgebrochen.`)
+    }
+
+    // Zusätzlich die Ruby-Syntax mit Prism überprüfen.
+    if (!(await sameRubySyntax(original, result))) {
+      throw new Error(`Ruby-Syntax in Thor-/ERB-Anweisung ${index} wurde verändert. Formatierung abgebrochen.`)
+    }
   }
 
   return indented
@@ -458,5 +717,7 @@ async function formatThorTemplate(source) {
 module.exports = {
   formatThorTemplate,
   classifyRubyBlock,
-  indentRubyBlocks
+  indentRubyBlocks,
+  formatFormWith,
+  sameRubySyntax
 }

@@ -72,6 +72,7 @@
     ]
   },
   "dependencies": {
+    "@ruby/prism": "^1.9.0",
     "prettier": "^3.9.10"
   },
   "devDependencies": {
