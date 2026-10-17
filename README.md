@@ -101,4 +101,8 @@ It is available as source code on GitHub and has not yet been published to the V
 
 ## License
 
-License information will be added before the first public extension release.
+b4um Thor Templates is released under the MIT License.
+
+Copyright (c) 2026 Alexander Baum.
+
+See the [LICENSE](LICENSE) file for details.
