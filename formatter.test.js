@@ -479,3 +479,68 @@ describe('Mehrzeilige form_with-Anweisungen', () => {
     expect(result).toContain('<%% end %>')
   })
 })
+describe('Leerzeichen in mehrzeiligen ERB-Anweisungen', () => {
+  it('entfernt überflüssige Leerzeichen am Zeilenende', async () => {
+    const source = `<section>
+<%%= form_with model: @task,
+    data: {
+      controller: "b4um-todo"
+    } do |form| %>
+  <p>Formular</p>
+<%% end %>
+</section>`.replace('model: @task,\n', 'model: @task,   \n')
+
+    const result = await formatThorTemplate(source)
+
+    expect(result).not.toMatch(/[ \t]+\n/)
+  })
+})
+
+describe('Stabile Leerzeichenkorrektur', () => {
+  it('verändert bereinigte ERB-Anweisungen beim zweiten Formatieren nicht', async () => {
+    const source = `<section>
+<%%= form_with model: @task,
+    data: {
+      controller: "b4um-todo"
+    } do |form| %>
+  <p>Formular</p>
+<%% end %>
+</section>`.replace('model: @task,\n', 'model: @task,   \n')
+
+    const firstResult = await formatThorTemplate(source)
+    const secondResult = await formatThorTemplate(firstResult)
+
+    expect(firstResult).not.toMatch(/[ \t]+\n/)
+    expect(secondResult).toBe(firstResult)
+  })
+})
+
+describe('Leerzeichen innerhalb mehrzeiliger Ruby-Strings', () => {
+  it('erhält bedeutende Leerzeichen innerhalb eines Strings', async () => {
+    const source = `<section>
+<%%= "Erste Zeile
+Zweite Zeile"
+%>
+</section>`.replace('Erste Zeile\n', 'Erste Zeile   \n')
+
+    const result = await formatThorTemplate(source)
+
+    expect(result).toContain('Erste Zeile   \n')
+  })
+})
+
+describe('Leerzeichen innerhalb von Ruby-Heredocs', () => {
+  it('erhält bedeutende Leerzeichen innerhalb eines Heredocs', async () => {
+    const source = `<section>
+<%%= <<~TEXT
+Erste Zeile
+Zweite Zeile
+TEXT
+%>
+</section>`.replace('Erste Zeile\n', 'Erste Zeile   \n')
+
+    const result = await formatThorTemplate(source)
+
+    expect(result).toContain('Erste Zeile   \n')
+  })
+})

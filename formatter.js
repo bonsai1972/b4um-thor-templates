@@ -111,6 +111,57 @@ function findErbBlocks(source) {
 }
 
 /**
+ * Entfernt Leerzeichen am Zeilenende innerhalb von ERB-Anweisungen,
+ * ohne den Inhalt von Ruby-Strings zu verändern.
+ */
+function cleanErbTrailingWhitespace(text) {
+  // Heredocs vollständig unverändert lassen.
+  // Ihre Leerzeichen können Bestandteil des Stringinhalts sein.
+  if (/<<[-~]?['"`]?[A-Za-z_]\w*/.test(text)) {
+    return text
+  }
+
+  let quote = null
+  let escaped = false
+  let result = ''
+
+  for (let index = 0; index < text.length; index++) {
+    const character = text[index]
+
+    if (escaped) {
+      escaped = false
+      result += character
+      continue
+    }
+
+    if (quote !== null) {
+      if (character === '\\') {
+        escaped = true
+      } else if (character === quote) {
+        quote = null
+      }
+
+      result += character
+      continue
+    }
+
+    if (character === '"' || character === "'") {
+      quote = character
+      result += character
+      continue
+    }
+
+    if (character === '\n') {
+      result = result.replace(/[ \t]+$/, '')
+    }
+
+    result += character
+  }
+
+  return result
+}
+
+/**
  * Erkennt die Art einer ERB-/Thor-Anweisung.
  */
 function classifyRubyBlock(erb) {
@@ -174,6 +225,7 @@ function indentRubyBlocks(source) {
   let rubyDepth = 0
   let insideMultilineErb = false
   let multilineErbText = ''
+  let multilineErbIndent = ''
   let sourcePosition = 0
 
   for (const line of lines) {
@@ -308,8 +360,12 @@ async function formatThorTemplate(source) {
 
     protectedSource += beforeBlock
 
-    // Die vollständige ERB-Anweisung unverändert speichern.
-    protectedBlocks.push(parenthesized ? `(${block.text})` : block.text)
+    // Überflüssige Leerzeichen am Ende mehrzeiliger
+    // ERB-Zeilen entfernen.
+    const cleanedBlock = block.text.includes('\n') ? cleanErbTrailingWhitespace(block.text) : block.text
+
+    // Die bereinigte ERB-Anweisung geschützt speichern.
+    protectedBlocks.push(parenthesized ? `(${cleanedBlock})` : cleanedBlock)
 
     // Prüfen, ob wir uns innerhalb eines HTML-Attributs befinden.
     const lastTagStart = protectedSource.lastIndexOf('<')
@@ -384,7 +440,11 @@ async function formatThorTemplate(source) {
 
   // Sicherstellen, dass alle ERB-/Thor-Anweisungen
   // bei der Formatierung unverändert geblieben sind.
-  const originalBlocks = erbBlocks.map((block) => block.text)
+  // Nur das Entfernen überflüssiger Leerzeichen am
+  // Zeilenende innerhalb mehrzeiliger ERB-Blöcke erlauben.
+  const normalizeErbBlock = (text) => (text.includes('\n') ? cleanErbTrailingWhitespace(text) : text)
+
+  const originalBlocks = erbBlocks.map((block) => normalizeErbBlock(block.text))
 
   const resultBlocks = findErbBlocks(indented).map((block) => block.text)
 

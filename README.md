@@ -2,11 +2,15 @@
 
 Syntax highlighting and formatting support for Ruby on Rails Thor generator templates in Visual Studio Code.
 
+**Version:** 0.1.0
+
 ## Features
 
 ### Syntax Highlighting
 
-Provides syntax highlighting for Thor ERB templates using escaped ERB tags.
+Provides syntax highlighting for Rails Thor ERB templates using escaped ERB tags.
+
+Example:
 
 ```erb
 <%% if @user %>
@@ -14,7 +18,7 @@ Provides syntax highlighting for Thor ERB templates using escaped ERB tags.
 <%% end %>
 ```
 
-Supports Thor template expressions such as:
+Supports template expressions such as:
 
 - `<%% ... %>`
 - `<%%= ... %>`
@@ -23,19 +27,21 @@ Supports Thor template expressions such as:
 
 ### Thor Template Formatter
 
-Includes a custom formatter for Thor ERB templates.
+Includes a custom formatter for `.html.erb.tt` files.
 
 The formatter:
 
 - Formats HTML using Prettier.
-- Preserves Thor and ERB expressions.
-- Handles Ruby control structures such as `if`, `else`, and `end`.
+- Preserves Ruby, ERB and Thor expressions.
+- Handles Ruby control structures such as `if`, `else` and `end`.
 - Supports multiline Ruby expressions.
 - Recognizes Rails form helpers such as `form_with`.
 - Protects ERB expressions from unintended changes.
 - Detects several malformed ERB and Ruby block structures.
+- Supports Ruby block indentation.
 
-Multiline Ruby expressions are intentionally preserved rather than reformatted internally.
+Multiline Ruby expressions retain their original structure and indentation. Trailing whitespace is removed from Ruby
+code lines while whitespace inside quoted Ruby strings is preserved.
 
 ## Supported File Extensions
 
@@ -46,43 +52,70 @@ Multiline Ruby expressions are intentionally preserved rather than reformatted i
 | `.js.tt`       | b4um Thor JavaScript |
 | `.css.tt`      | b4um Thor CSS        |
 
-Custom syntax highlighting is currently implemented for `.html.erb.tt` files.
+Custom syntax highlighting and formatting are currently implemented for `.html.erb.tt` files.
+
+## Installation
+
+### Install from VSIX
+
+Download `b4um-thor-templates-0.1.0.vsix` from the
+[v0.1.0 GitHub release](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.1.0).
+
+1. Open Visual Studio Code.
+2. Open the Extensions panel (`Cmd + Shift + X` on macOS).
+3. Click the `...` menu in the Extensions panel.
+4. Select **Install from VSIX...**.
+5. Choose the downloaded `.vsix` file.
+6. Confirm the installation.
+
+The extension can then be used in a normal Visual Studio Code window; the Extension Development Host is not required.
+
+### Visual Studio Code Marketplace
+
+The extension is not yet available on the Visual Studio Code Marketplace. Installation is currently provided through
+GitHub Releases.
+
+## Formatting
+
+Open a `.html.erb.tt` file in Visual Studio Code.
+
+Open the Command Palette (`Cmd + Shift + P` on macOS) and select:
+
+**Format Document With... → b4um Thor Formatter**
+
+The formatter processes the HTML structure while preserving Thor and Ruby expressions.
+
+Automatic formatting on save is not enabled by default. Manual formatting is recommended for this initial release.
 
 ## Development
 
-Requirements:
+### Requirements
 
 - Visual Studio Code 1.90.0 or newer
 - Node.js and npm
 
-Clone the repository:
+### Clone the Repository
 
 ```bash
 git clone https://github.com/bonsai1972/b4um-thor-templates.git
 cd b4um-thor-templates
 ```
 
-Install dependencies:
+### Install Dependencies
 
 ```bash
 npm install
 ```
 
+### Run the Extension
+
 Open the project in Visual Studio Code and press **F5** to launch the Extension Development Host.
 
-## Formatting
-
-Open a `.html.erb.tt` file in the Extension Development Host.
-
-Use the Command Palette:
-
-**Format Document With... → b4um Thor Formatter**
-
-Automatic formatting on save is not enabled by default.
+Open a `.html.erb.tt` file to test syntax highlighting and formatting.
 
 ## Tests
 
-Run the automated tests:
+The project includes 40 automated tests. Run them with:
 
 ```bash
 npx vitest run
@@ -91,13 +124,19 @@ npx vitest run
 The test suite covers Thor syntax preservation, Ruby block indentation, multiline expressions, malformed ERB structures,
 and formatting stability.
 
+## Release
+
+**Current version:** 0.1.0
+
+The first release includes Thor ERB syntax highlighting, a custom HTML formatter, Ruby and Thor expression preservation,
+multiline expression support, automated tests, and an installable VSIX package.
+
+See the [v0.1.0 release](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.1.0) for the download.
+
 ## Status
 
-**Version:** 0.1.0
-
-The extension is currently under development.
-
-It is available as source code on GitHub and has not yet been published to the Visual Studio Code Marketplace.
+b4um Thor Templates is currently under development. Version 0.1.0 is available as source code and as an installable VSIX
+package on GitHub, but is not yet published to the Visual Studio Code Marketplace.
 
 ## License
 
