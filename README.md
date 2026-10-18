@@ -3,7 +3,7 @@
 Syntax highlighting and formatting support for Ruby on Rails Thor generator templates and regular Rails ERB views in
 Visual Studio Code.
 
-**Version:** 0.1.5
+**Version:** 0.1.6
 
 ## Features
 
@@ -61,7 +61,7 @@ preserved.
 
 ### Rails ERB Formatter
 
-Version 0.1.5 introduces formatting support for regular Rails `.html.erb` view files.
+Version 0.1.6 improves formatting support for regular Rails `.html.erb` view files.
 
 The formatter supports:
 
@@ -76,6 +76,9 @@ The formatter supports:
 - Positional and keyword arguments.
 - Nested keyword hashes.
 - Consistent Ruby argument indentation.
+- Multiline Ruby `case` expressions.
+- Alignment of `case`, `when`, `else` and `end`.
+- Consistent indentation of Ruby `case` result expressions.
 - Preservation of unsupported Ruby expressions.
 - Stable formatting across repeated runs.
 
@@ -239,6 +242,78 @@ After:
            title: "Users" %>
 ```
 
+### Example: Multiline Rails render Formatting
+
+Version 0.1.6 improves the alignment of multiline `render` arguments.
+
+Before:
+
+```erb
+<% if @users.any? %>
+  <%= render user,
+       compact: true,
+          preview_length: 240 %>
+<% end %>
+```
+
+After:
+
+```erb
+<% if @users.any? %>
+  <%= render user,
+             compact: true,
+             preview_length: 240 %>
+<% end %>
+```
+
+The formatter aligns all continuation arguments consistently.
+
+Repeated formatting does not shift arguments further to the right.
+
+### Example: Ruby case Formatting
+
+Version 0.1.6 introduces improved indentation for multiline Ruby `case` expressions inside ERB blocks.
+
+Before:
+
+```erb
+<% users.each do |user| %>
+  <% card_class =
+       case user.id % 3
+       when 0
+       ["wide", 240]
+         when 1
+       ["soft", 58]
+       else
+         ["normal", 58]
+       end %>
+<% end %>
+```
+
+After:
+
+```erb
+<% users.each do |user| %>
+  <% card_class =
+       case user.id % 3
+       when 0
+         ["wide", 240]
+       when 1
+         ["soft", 58]
+       else
+         ["normal", 58]
+       end %>
+<% end %>
+```
+
+The formatter:
+
+- Aligns `when` branches with the `case` expression.
+- Aligns `else` and `end` with `case`.
+- Indents result expressions consistently.
+- Preserves the original Ruby syntax.
+- Produces stable results when formatting repeatedly.
+
 ### Ruby Syntax Protection
 
 The Prism Ruby parser verifies that formatting changes preserve the original Ruby syntax.
@@ -265,8 +340,8 @@ Other Thor template extensions are recognized but do not currently use the custo
 
 ### Install from VSIX
 
-Download `b4um-thor-templates-0.1.5.vsix` from the
-[v0.1.5 GitHub release](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.1.5).
+Download `b4um-thor-templates-0.1.6.vsix` from the
+[v0.1.6 GitHub release](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.1.6).
 
 1. Open Visual Studio Code.
 2. Open the Extensions panel (`Cmd + Shift + X` on macOS).
@@ -343,7 +418,7 @@ Open a `.html.erb.tt` or `.html.erb` file to test syntax highlighting and format
 
 ## Tests
 
-The project includes **62 automated tests**.
+The project includes **65 automated tests**.
 
 Run them with:
 
@@ -357,6 +432,7 @@ The test suite covers:
 - Regular Rails ERB formatting
 - Ruby block indentation
 - Multiline Ruby expressions
+- Ruby `case`, `when`, `else` and `end` indentation
 - `form_with` formatting
 - `form.text_field` formatting
 - `form.label` formatting
@@ -367,6 +443,7 @@ The test suite covers:
 - Rails `button_to` formatting
 - Nested Ruby hashes
 - Positional and keyword arguments
+- Consistent alignment of multiline Rails helper arguments
 - Unicode preservation
 - Ruby syntax verification using Prism
 - Unsupported form helper preservation
@@ -377,15 +454,49 @@ The test suite covers:
 - Formatting stability and idempotence
 - Integration tests using real b4um generator templates
 
-All 62 tests passed during development of version 0.1.5.
+All **65 tests passed** during development of version 0.1.6.
 
 ## Release
 
-**Current version:** 0.1.5
+**Current version:** 0.1.6
 
-### What's New in v0.1.5
+### What's New in v0.1.6
 
-Version 0.1.5 introduces regular Rails ERB formatting and improves the formatting capabilities of the existing Thor
+Version 0.1.6 focuses on improved Ruby indentation, consistent Rails helper formatting and reliable formatting of
+regular Rails ERB views.
+
+#### Improved Rails render Formatting
+
+- Improved indentation of multiline `render` calls.
+- Aligns positional and keyword arguments consistently.
+- Prevents indentation from shifting during repeated formatting.
+- Supports multiple continuation arguments within the same ERB expression.
+
+#### Improved Rails link_to Formatting
+
+- Improved alignment of multiline `link_to` arguments.
+- Preserves consistent indentation inside HTML elements and Ruby blocks.
+- Maintains stable formatting across repeated runs.
+
+#### Ruby case Formatting
+
+- Added indentation support for multiline Ruby `case` expressions.
+- Aligns `when`, `else` and `end` with the corresponding `case`.
+- Indents result expressions consistently.
+- Corrects incorrectly indented branches.
+- Preserves Ruby syntax using Prism.
+
+#### Stability and Reliability
+
+- Improved handling of multiline ERB expressions.
+- Prevents cumulative indentation changes.
+- Preserves existing formatting behavior for supported Rails helpers.
+- Expanded automated test coverage from 62 to 65 tests.
+- Verified formatting using real Rails ERB views.
+
+### Previous Release: v0.1.5
+
+Version 0.1.5 introduced regular Rails ERB formatting and improved the formatting capabilities of the existing Thor
 template formatter.
 
 #### Rails ERB Support
@@ -418,6 +529,9 @@ template formatter.
 - Improves formatting stability across repeated runs.
 - Expanded automated test coverage from 50 to 62 tests.
 - Verified formatting using real Rails ERB views.
+
+The previous release is available from the
+[v0.1.5 GitHub release](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.1.5).
 
 ### Previous Release: v0.1.4
 
@@ -466,14 +580,14 @@ The previous release is available from the
 
 ### Download
 
-Download the latest version from the
-[v0.1.5 GitHub release](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.1.5).
+Download version 0.1.6 from the
+[v0.1.6 GitHub release](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.1.6).
 
 ## Status
 
 b4um Thor Templates is under active development.
 
-Version 0.1.5 is the current release version.
+Version 0.1.6 is the current release version.
 
 The extension is distributed as an installable VSIX package through GitHub Releases.
 
