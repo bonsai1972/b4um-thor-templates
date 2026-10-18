@@ -79,6 +79,11 @@
         "language": "b4um-thor-erb",
         "scopeName": "text.html.erb.thor",
         "path": "./syntaxes/thor-erb.tmLanguage.json"
+      },
+      {
+        "language": "b4um-rails-erb",
+        "scopeName": "text.html.erb.thor",
+        "path": "./syntaxes/thor-erb.tmLanguage.json"
       }
     ]
   },

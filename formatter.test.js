@@ -926,3 +926,113 @@ turbo_confirm: "Wirklich löschen?"
     expect(second).toBe(first)
   })
 })
+
+describe('Mehrzeilige HTML-Inhalte', () => {
+  it('erhält bestehende Zeilenumbrüche innerhalb von HTML-Elementen', async () => {
+    const source = `<section>
+  <h2 class="b4um-empty-state__title">
+    No users yet.
+  </h2>
+
+  <p class="b4um-empty-state__text">
+    Create your first user to get started.
+  </p>
+</section>`
+
+    const result = await formatThorTemplate(source)
+
+    expect(result).toBe(source + '\n')
+  })
+
+  it('erhält bereits vorhandene prettier-ignore-Kommentare', async () => {
+    const source = `<section>
+  <!-- prettier-ignore -->
+  <p>Dieser Text soll unverändert bleiben.</p>
+</section>`
+
+    const result = await formatThorTemplate(source)
+
+    expect(result).toContain('<!-- prettier-ignore -->')
+  })
+})
+
+describe('Rails link_to Formatierung', () => {
+  it('richtet link_to-Argumente unter dem ersten Argument aus', async () => {
+    const source = `<%= link_to "New user",
+new_user_path,
+class: "button button--primary" %>`
+
+    const expected = `<%= link_to "New user",
+            new_user_path,
+            class: "button button--primary" %>
+`
+
+    const result = await formatThorTemplate(source)
+
+    expect(result).toBe(expected)
+  })
+
+  it('richtet link_to innerhalb eines HTML-Elements korrekt ein', async () => {
+    const source = `<div>
+  <%= link_to "New user",
+new_user_path,
+class: "button button--primary" %>
+</div>`
+
+    const expected = `<div>
+  <%= link_to "New user",
+              new_user_path,
+              class: "button button--primary" %>
+</div>
+`
+
+    const result = await formatThorTemplate(source)
+
+    expect(result).toBe(expected)
+  })
+
+  it('behält die link_to-Einrückung beim zweiten Formatieren bei', async () => {
+    const source = `<div>
+  <%= link_to "New user",
+new_user_path,
+class: "button button--primary" %>
+</div>`
+
+    const first = await formatThorTemplate(source)
+    const second = await formatThorTemplate(first)
+
+    expect(second).toBe(first)
+  })
+
+  it('richtet render innerhalb eines if-Blocks korrekt aus', async () => {
+    const source = `<% if @users.any? %>
+  <%= render "bento",
+users: @users %>
+<% end %>`
+
+    const expected = `<% if @users.any? %>
+  <%= render "bento",
+             users: @users %>
+<% end %>
+`
+
+    const result = await formatThorTemplate(source)
+
+    expect(result).toBe(expected)
+  })
+})
+
+describe('Rails render Formatierung', () => {
+  it('richtet render-Argumente unter dem ersten Argument aus', async () => {
+    const source = `<%= render "bento",
+users: @users %>`
+
+    const expected = `<%= render "bento",
+           users: @users %>
+`
+
+    const result = await formatThorTemplate(source)
+
+    expect(result).toBe(expected)
+  })
+})

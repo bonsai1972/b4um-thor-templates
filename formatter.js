@@ -30,10 +30,11 @@ async function parseFormWith(erb) {
 
   const isFormWith = ruby.startsWith('form_with ')
   const isFormHelper = /^form\.(?:text_field|label|submit)\b/.test(ruby)
-  const isRenderPartial = /^render\s+partial\s*:/.test(ruby)
+  const isRenderPartial = /^render\s+(?:partial\s*:|["'])/.test(ruby)
   const isButtonTo = /^button_to\b/.test(ruby)
+  const isLinkTo = erb.startsWith('<%=') && /^link_to\b/.test(ruby)
 
-  if (!isFormWith && !isFormHelper && !isRenderPartial && !isButtonTo) {
+  if (!isFormWith && !isFormHelper && !isRenderPartial && !isButtonTo && !isLinkTo) {
     return null
   }
 
@@ -57,6 +58,11 @@ async function parseFormWith(erb) {
 
   if (call?.constructor.name !== 'CallNode') {
     return null
+  }
+
+  // link_to ohne Receiver unterstützen.
+  if (isLinkTo) {
+    return call.name === 'link_to' && !call.receiver ? call : null
   }
 
   // button_to ohne Receiver unterstützen.
@@ -148,15 +154,24 @@ async function formatFormWith(erb) {
     return erb
   }
 
+  // link_to benötigt ein Text- und ein Zielargument.
+  // Beide sollen vor den Keyword-Argumenten stehen.
+  if (call.name === 'link_to' && args.length < 3) {
+    return erb
+  }
+
   const positionalArgs = args.slice(0, -1)
 
   // Nur einfache Positionsargumente unterstützen.
   if (
     positionalArgs.some(
       (argument) =>
-        !['SymbolNode', 'StringNode', 'IntegerNode', ...(call.name === 'button_to' ? ['CallNode'] : [])].includes(
-          argument.constructor.name
-        )
+        ![
+          'SymbolNode',
+          'StringNode',
+          'IntegerNode',
+          ...(['button_to', 'link_to'].includes(call.name) ? ['CallNode'] : [])
+        ].includes(argument.constructor.name)
     )
   ) {
     return erb
@@ -166,13 +181,13 @@ async function formatFormWith(erb) {
 
   // form_with und render partial: ab zwei Keyword-Argumenten formatieren.
   // Bei Formularhelfern reicht bereits ein Keyword-Argument.
-  if (elements.length < (isFormWith || call.name === 'render' ? 2 : 1)) {
+  if (elements.length < (isFormWith || (call.name === 'render' && positionalArgs.length === 0) ? 2 : 1)) {
     return erb
   }
 
   const methodName = isFormWith
     ? 'form_with'
-    : call.name === 'render' || call.name === 'button_to'
+    : ['render', 'button_to', 'link_to'].includes(call.name)
       ? call.name
       : `form.${call.name}`
   const prefix = `${opening}${whitespace}${methodName} `
@@ -622,7 +637,9 @@ function indentRubyBlocks(source) {
       insideMultilineErb = true
       multilineErbText = line
 
-      multilineErbIndent = /^<%%?=\s*form\.(?:text_field|label|submit)\b/.test(trimmed) ? '  '.repeat(rubyDepth) : ''
+      multilineErbIndent = /^(?:<%%?=\s*form\.(?:text_field|label|submit)\b|<%=\s*(?:render|link_to)\b)/.test(trimmed)
+        ? '  '.repeat(rubyDepth)
+        : ''
 
       const extraIndent = '  '.repeat(rubyDepth)
       result.push(extraIndent + line)
@@ -752,6 +769,15 @@ async function formatThorTemplate(source) {
   // Verbleibenden HTML-Code übernehmen.
   protectedSource += source.slice(lastPosition)
 
+  // Bereits mehrzeilige HTML-Elemente vor dem
+  // Zusammenziehen durch Prettier schützen.
+  protectedSource = protectedSource.replace(
+    /(<(h[1-6]|p)\b[^>]*>)(\r?\n)([ \t]*)([^<\r\n]+)(\r?\n)([ \t]*)(<\/\2\s*>)/g,
+    (_match, opening, tag, newline1, indent1, content, newline2, indent2, closing) => {
+      return `${opening}${newline1}${indent1}<!-- prettier-ignore --><!-- b4um-internal-ignore -->${newline1}${indent1}${content}${newline2}${indent2}${closing}`
+    }
+  )
+
   // HTML mit Prettier formatieren.
   const formatted = await prettier.format(protectedSource, {
     parser: 'html',
@@ -800,7 +826,7 @@ async function formatThorTemplate(source) {
 
         const firstLine = lines[0]
         const firstArgument = firstLine.match(
-          /^(<%%?=\s*(?:form_with|form\.(?:text_field|label|submit)|render|button_to)\s+)/
+          /^(<%%?=\s*(?:form_with|form\.(?:text_field|label|submit)|render|button_to|link_to)\s+)/
         )
 
         if (!firstArgument) {
@@ -832,8 +858,15 @@ async function formatThorTemplate(source) {
     throw new Error('Nicht alle Thor-Platzhalter konnten wiederhergestellt werden.')
   }
 
+  // Ausschließlich unsere intern eingefügten Kommentare entfernen.
+  // Bereits vorhandene prettier-ignore-Kommentare bleiben erhalten.
+  const cleanedHtml = restored.replace(
+    /^[ \t]*<!-- prettier-ignore -->\r?\n[ \t]*<!-- b4um-internal-ignore -->\r?\n/gm,
+    ''
+  )
+
   // Ruby-Blöcke zusätzlich einrücken.
-  const indented = indentRubyBlocks(restored)
+  const indented = indentRubyBlocks(cleanedHtml)
 
   // Sicherstellen, dass alle ERB-/Thor-Anweisungen
   // bei der Formatierung unverändert geblieben sind.
