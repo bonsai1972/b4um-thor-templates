@@ -2,7 +2,7 @@ const vscode = require('vscode')
 const { formatThorTemplate } = require('./formatter')
 
 function activate(context) {
-  const formatter = vscode.languages.registerDocumentFormattingEditProvider('b4um-thor-erb', {
+  const formatter = vscode.languages.registerDocumentFormattingEditProvider(['b4um-thor-erb', 'b4um-rails-erb'], {
     async provideDocumentFormattingEdits(document) {
       const source = document.getText()
 

@@ -341,6 +341,78 @@ class: "task-form" do |form| %>
   })
 })
 
+describe('Thor-Anweisungen innerhalb von Rails-ERB', () => {
+  it('erhält eingebettete Thor-Ausgaben in button_to', async () => {
+    const source = `<div>
+<%%= button_to <%= singular_table_name %>_path(task),
+  method: :patch,
+  class: "b4um-todo__checkbox",
+  form: { data: { turbo: true } },
+  aria: {
+    label: task.complete? ? "Als offen markieren" : "Als erledigt markieren",
+    pressed: task.complete?
+  } do %>
+  <span>Aufgabe</span>
+<%% end %>
+</div>`
+
+    const result = await formatThorTemplate(source)
+
+    expect(result).toContain('<%%= button_to <%= singular_table_name %>_path(task),')
+    expect(result).toContain('method: :patch,')
+    expect(result).toContain('pressed: task.complete?')
+    expect(result).toContain('<%% end %>')
+  })
+
+  it('formatiert unordentliche button_to-Argumente mit eingebettetem Thor', async () => {
+    const source = `<div>
+<%%= button_to <%= singular_table_name %>_path(task),
+method: :patch, class: "b4um-todo__checkbox",
+  form: { data: { turbo: true } },
+aria: {
+label: "Aufgabe",
+pressed: task.complete?
+} do %>
+  <span>Aufgabe</span>
+<%% end %>
+</div>`
+
+    const result = await formatThorTemplate(source)
+
+    expect(result).toContain(`  <%%= button_to <%= singular_table_name %>_path(task),
+                 method: :patch,
+                 class: "b4um-todo__checkbox",
+                 form: { data: { turbo: true } },
+                 aria: {
+                   label: "Aufgabe",
+                   pressed: task.complete?
+                 } do %>`)
+  })
+
+  it('formatiert verschachtelte button_to-Daten mit turbo_confirm', async () => {
+    const source = `<div>
+<%%= button_to <%= singular_table_name %>_path(task),
+method: :delete,
+form: { data: { turbo: true, turbo_confirm: "Wirklich löschen?" } } do %>
+  <span>Löschen</span>
+<%% end %>
+</div>`
+
+    const result = await formatThorTemplate(source)
+
+    expect(result).toContain(`  <%%= button_to <%= singular_table_name %>_path(task),
+                 method: :delete,
+                 form: {
+                   data: {
+                     turbo: true,
+                     turbo_confirm: "Wirklich löschen?"
+                   }
+                 } do %>`)
+
+    expect(await formatThorTemplate(result)).toBe(result)
+  })
+})
+
 describe('Echte b4um Generator-Templates', () => {
   it('erhält alle Thor-Anweisungen außer erlaubten form_with-Formatierungen', async () => {
     const filePath = path.join(process.cwd(), 'fixtures', 'todo-index.html.erb.tt')
@@ -802,5 +874,55 @@ TEXT
     const result = await formatThorTemplate(source)
 
     expect(result).toContain('Erste Zeile   \n')
+  })
+})
+
+describe('Normale Rails ERB-Dateien', () => {
+  it('formatiert HTML mit normalen Rails-ERB-Anweisungen', async () => {
+    const source = `<div>
+<% if @tasks.any? %>
+<h1>Meine Aufgaben</h1>
+<%= @tasks.first.name %>
+<% else %>
+<p>Keine Aufgaben vorhanden.</p>
+<% end %>
+</div>`
+
+    const expected = `<div>
+  <% if @tasks.any? %>
+    <h1>Meine Aufgaben</h1>
+    <%= @tasks.first.name %>
+  <% else %>
+    <p>Keine Aufgaben vorhanden.</p>
+  <% end %>
+</div>
+`
+
+    const result = await formatThorTemplate(source)
+
+    expect(result).toBe(expected)
+    expect(await formatThorTemplate(result)).toBe(expected)
+  })
+})
+
+describe('Stabile button_to-Formatierung', () => {
+  it('verändert die Einrückung beim zweiten Formatieren nicht', async () => {
+    const source = `<div>
+<%%= button_to <%= singular_table_name %>_path(task),
+method: :delete,
+form: {
+data: {
+turbo: true,
+turbo_confirm: "Wirklich löschen?"
+}
+} do %>
+<span>Löschen</span>
+<%% end %>
+</div>`
+
+    const first = await formatThorTemplate(source)
+    const second = await formatThorTemplate(first)
+
+    expect(second).toBe(first)
   })
 })

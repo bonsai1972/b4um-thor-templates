@@ -30,6 +30,17 @@
         "configuration": "./language-configuration.json"
       },
       {
+        "id": "b4um-rails-erb",
+        "aliases": [
+          "b4um Rails ERB",
+          "Rails ERB"
+        ],
+        "extensions": [
+          ".html.erb"
+        ],
+        "configuration": "./language-configuration.json"
+      },
+      {
         "id": "b4um-thor-ruby",
         "aliases": [
           "b4um Thor Ruby",

@@ -31,13 +31,20 @@ async function parseFormWith(erb) {
   const isFormWith = ruby.startsWith('form_with ')
   const isFormHelper = /^form\.(?:text_field|label|submit)\b/.test(ruby)
   const isRenderPartial = /^render\s+partial\s*:/.test(ruby)
+  const isButtonTo = /^button_to\b/.test(ruby)
 
-  if (!isFormWith && !isFormHelper && !isRenderPartial) {
+  if (!isFormWith && !isFormHelper && !isRenderPartial && !isButtonTo) {
     return null
   }
 
   // Offene Ruby-Blöcke für Prism abschließen.
-  const rubySource = /\bdo(?:\s*\|[^|]*\|)?\s*$/.test(ruby) ? `${ruby}\nend` : ruby
+  // Eingebettete Thor-Ausgaben für Prism vorübergehend
+  // durch gültige Ruby-Ausdrücke ersetzen.
+  const rubyForParsing = isButtonTo
+    ? ruby.replace(/<%=\s*singular_table_name\s*%>_path\b/g, 'b4um_thor_placeholder_path')
+    : ruby
+
+  const rubySource = /\bdo(?:\s*\|[^|]*\|)?\s*$/.test(rubyForParsing) ? `${rubyForParsing}\nend` : rubyForParsing
 
   const parse = await getRubyParser()
   const result = parse(rubySource)
@@ -52,8 +59,9 @@ async function parseFormWith(erb) {
     return null
   }
 
-  if (isFormWith) {
-    return call.name === 'form_with' ? call : null
+  // button_to ohne Receiver unterstützen.
+  if (isButtonTo) {
+    return call.name === 'button_to' && !call.receiver ? call : null
   }
 
   // Nur render-Aufrufe mit dem Keyword partial unterstützen.
@@ -62,6 +70,10 @@ async function parseFormWith(erb) {
   }
 
   // Ausschließlich unterstützte Methoden auf dem Formularobjekt erkennen.
+  if (isFormWith) {
+    return call.name === 'form_with' && !call.receiver ? call : null
+  }
+
   if (
     !['text_field', 'label', 'submit'].includes(call.name) ||
     call.receiver?.constructor.name !== 'CallNode' ||
@@ -109,7 +121,10 @@ async function formatFormWith(erb) {
   const [, opening, whitespace, ruby, closing] = match
 
   // Derselbe Ruby-Text, den parseFormWith() an Prism übergibt.
-  const rubySource = ruby.trim()
+  const rubySource =
+    call.name === 'button_to'
+      ? ruby.trim().replace(/<%=\s*singular_table_name\s*%>_path\b/g, 'b4um_thor_placeholder_path')
+      : ruby.trim()
 
   // form_with nur bei langen oder bereits mehrzeiligen Aufrufen formatieren.
   // Unterstützte Formularhelfer dürfen auch kurze einzeilige Aufrufe umbrechen.
@@ -137,7 +152,12 @@ async function formatFormWith(erb) {
 
   // Nur einfache Positionsargumente unterstützen.
   if (
-    positionalArgs.some((argument) => !['SymbolNode', 'StringNode', 'IntegerNode'].includes(argument.constructor.name))
+    positionalArgs.some(
+      (argument) =>
+        !['SymbolNode', 'StringNode', 'IntegerNode', ...(call.name === 'button_to' ? ['CallNode'] : [])].includes(
+          argument.constructor.name
+        )
+    )
   ) {
     return erb
   }
@@ -150,22 +170,63 @@ async function formatFormWith(erb) {
     return erb
   }
 
-  const methodName = isFormWith ? 'form_with' : call.name === 'render' ? 'render' : `form.${call.name}`
+  const methodName = isFormWith
+    ? 'form_with'
+    : call.name === 'render' || call.name === 'button_to'
+      ? call.name
+      : `form.${call.name}`
   const prefix = `${opening}${whitespace}${methodName} `
   const continuationIndent = ' '.repeat(prefix.length)
 
-  const formattedArguments = [...positionalArgs.map((argument) => rubyNodeText(rubySource, argument).trim())]
+  const formattedArguments = [
+    ...positionalArgs.map((argument) => {
+      const text = rubyNodeText(rubySource, argument).trim()
+
+      if (call.name === 'button_to') {
+        return text.replace(/b4um_thor_placeholder_path/g, '<%= singular_table_name %>_path')
+      }
+
+      return text
+    })
+  ]
 
   for (const element of elements) {
     const key = rubyNodeText(rubySource, element.key)
     const value = element.value
 
-    if (value.constructor.name === 'HashNode' && value.elements.length > 0) {
-      const nestedIndent = ' '.repeat(prefix.length + 1)
-
-      const nestedArguments = value.elements.map(
-        (nested) => `${nestedIndent}${rubyNodeText(rubySource, nested).trim()}`
+    if (
+      value.constructor.name === 'HashNode' &&
+      value.elements.length > 0 &&
+      !(
+        call.name === 'button_to' &&
+        value.elements.length === 1 &&
+        !value.elements.some(
+          (element) => element.value?.constructor.name === 'HashNode' && element.value.elements.length > 1
+        )
       )
+    ) {
+      const nestedIndent =
+        call.name === 'button_to' ? ' '.repeat(continuationIndent.length + 2) : ' '.repeat(prefix.length + 1)
+
+      const nestedArguments = value.elements.map((nested) => {
+        const nestedValue = nested.value
+
+        if (
+          call.name === 'button_to' &&
+          nestedValue?.constructor.name === 'HashNode' &&
+          nestedValue.elements.length > 1
+        ) {
+          const nestedKey = rubyNodeText(rubySource, nested.key)
+
+          const entries = nestedValue.elements.map(
+            (entry) => `${nestedIndent}  ${rubyNodeText(rubySource, entry).trim()}`
+          )
+
+          return `${nestedIndent}${nestedKey} {\n` + entries.join(',\n') + `\n${nestedIndent}}`
+        }
+
+        return `${nestedIndent}${rubyNodeText(rubySource, nested).trim()}`
+      })
 
       formattedArguments.push(`${key} {\n` + nestedArguments.join(',\n') + `\n${continuationIndent}}`)
     } else {
@@ -207,7 +268,7 @@ async function sameRubySyntax(originalErb, formattedErb) {
       return null
     }
 
-    const ruby = match[1].trim()
+    const ruby = match[1].trim().replace(/<%=\s*singular_table_name\s*%>_path\b/g, 'b4um_thor_placeholder_path')
 
     // Offene Ruby-Blöcke für Prism abschließen.
     return /\bdo(?:\s*\|[^|]*\|)?\s*$/.test(ruby) ? `${ruby}\nend` : ruby
@@ -347,6 +408,27 @@ function findErbBlocks(source) {
       }
 
       if (source.startsWith('<%', index)) {
+        // In Thor-Templates darf eine auszuwertende ERB-Ausgabe
+        // innerhalb einer maskierten Rails-ERB-Anweisung stehen.
+        //
+        // Beispiel:
+        // <%%= button_to <%= singular_table_name %>_path(task), ... %>
+        //
+        // Andere Verschachtelungen bleiben weiterhin verboten.
+        const outerIsEscaped = source.startsWith('<%%', start)
+        const innerIsOutput = source.startsWith('<%=', index)
+
+        if (outerIsEscaped && innerIsOutput) {
+          const innerEnd = source.indexOf('%>', index + 3)
+
+          if (innerEnd === -1) {
+            throw new Error('Eingebettete Thor-Anweisung wurde nicht geschlossen.')
+          }
+
+          index = innerEnd + 2
+          continue
+        }
+
         throw new Error('Ungültige Reihenfolge der ERB-Markierungen')
       }
 
@@ -676,7 +758,9 @@ async function formatThorTemplate(source) {
     tabWidth: 2,
     useTabs: false,
     printWidth: 100,
-    htmlWhitespaceSensitivity: 'ignore'
+    htmlWhitespaceSensitivity: 'ignore',
+    singleAttributePerLine: true,
+    bracketSameLine: false
   })
 
   // Geschützte Thor-/ERB-Anweisungen wiederherstellen.
@@ -715,7 +799,9 @@ async function formatThorTemplate(source) {
         const lines = block.split('\n')
 
         const firstLine = lines[0]
-        const firstArgument = firstLine.match(/^(<%%?=\s*(?:form_with|form\.(?:text_field|label|submit)|render)\s+)/)
+        const firstArgument = firstLine.match(
+          /^(<%%?=\s*(?:form_with|form\.(?:text_field|label|submit)|render|button_to)\s+)/
+        )
 
         if (!firstArgument) {
           return block
