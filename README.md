@@ -3,13 +3,30 @@
 Syntax highlighting and formatting support for Ruby on Rails Thor generator templates and regular Rails ERB views in
 Visual Studio Code.
 
-**Version:** 0.1.6
+**Current Version:** 0.1.6
+
+## Overview
+
+b4um Thor Templates is a Visual Studio Code extension designed to improve the development experience when working with
+Ruby on Rails generator templates and regular ERB views.
+
+The extension provides syntax highlighting for Thor templates and a custom formatter that combines HTML formatting with
+Ruby syntax protection.
+
+It supports both escaped ERB expressions used in Thor templates and standard ERB expressions used in Rails views.
 
 ## Features
 
 ### Syntax Highlighting
 
-Provides syntax highlighting for Rails Thor ERB templates using escaped ERB tags.
+Provides syntax highlighting for Rails Thor templates and regular Rails ERB views.
+
+Supported expressions include:
+
+- `<%% ... %>`
+- `<%%= ... %>`
+- `<% ... %>`
+- `<%= ... %>`
 
 Example:
 
@@ -19,308 +36,65 @@ Example:
 <%% end %>
 ```
 
-Supports template expressions such as:
-
-- `<%% ... %>`
-- `<%%= ... %>`
-- `<% ... %>`
-- `<%= ... %>`
-
-The extension also supports regular Rails ERB view files using standard ERB tags.
-
-### Thor Template Formatter
-
-Includes a custom formatter for `.html.erb.tt` files.
-
-The formatter:
-
-- Formats HTML using Prettier.
-- Preserves Ruby, ERB and Thor expressions.
-- Handles Ruby control structures such as `if`, `else` and `end`.
-- Supports multiline Ruby expressions.
-- Supports Rails `form_with` and selected form builder helpers.
-- Formats long `form_with` calls across multiple lines.
-- Formats single-line and multiline `form.text_field`, `form.label` and `form.submit` calls.
-- Formats Rails `render partial:` calls with multiple keyword arguments.
-- Formats supported `button_to` calls.
-- Corrects indentation of positional and keyword arguments.
-- Formats nested keyword hashes in supported Rails helpers.
-- Preserves unsupported form helpers without applying Ruby argument formatting.
-- Preserves Unicode characters, including German umlauts.
-- Uses the Prism Ruby parser to verify that formatted Ruby syntax remains unchanged.
-- Protects ERB expressions from unintended changes.
-- Detects several malformed ERB and Ruby block structures.
-- Supports Ruby block indentation.
-- Preserves existing multiline text formatting in HTML headings and paragraphs.
-- Produces stable results across repeated formatting operations.
-
-The formatter preserves Ruby expressions that cannot be safely reformatted.
-
-Trailing whitespace is removed from Ruby code lines while whitespace inside quoted Ruby strings and heredocs is
-preserved.
-
-### Rails ERB Formatter
-
-Version 0.1.6 improves formatting support for regular Rails `.html.erb` view files.
-
-The formatter supports:
-
-- Standard Rails ERB expressions using `<% ... %>` and `<%= ... %>`.
-- HTML formatting using Prettier.
-- Ruby control structures such as `if`, `else` and `end`.
-- Multiline Ruby expressions.
-- Rails `form_with` and supported form builder helpers.
-- Rails `link_to` calls.
-- Rails `button_to` calls.
-- Rails `render` calls.
-- Positional and keyword arguments.
-- Nested keyword hashes.
-- Consistent Ruby argument indentation.
-- Multiline Ruby `case` expressions.
-- Alignment of `case`, `when`, `else` and `end`.
-- Consistent indentation of Ruby `case` result expressions.
-- Preservation of unsupported Ruby expressions.
-- Stable formatting across repeated runs.
-
 Thor templates and regular Rails views are handled separately to preserve their respective ERB syntax.
 
-### HTML Formatting Protection
+### HTML Formatting
 
-The formatter preserves existing multiline text formatting inside HTML headings and paragraphs.
+The formatter uses Prettier to format HTML while protecting embedded Ruby and ERB expressions.
 
-Supported elements include:
+Features include:
 
-- `<h1>` through `<h6>`
-- `<p>`
+- HTML indentation and structure formatting.
+- Preservation of Ruby and ERB expressions.
+- Preservation of multiline text inside headings and paragraphs.
+- Preservation of existing `prettier-ignore` comments.
+- Unicode support, including German umlauts.
+- Stable formatting across repeated operations.
 
-This prevents Prettier from unnecessarily collapsing or restructuring existing multiline text.
+### Ruby and ERB Formatting
 
-Existing `<!-- prettier-ignore -->` comments are also preserved.
+The formatter supports Ruby control structures and multiline expressions.
 
-### Example: form_with Formatting
+Supported features include:
 
-Before:
+- Ruby `if`, `else` and `end` blocks.
+- Multiline Ruby expressions.
+- Ruby `case`, `when`, `else` and `end` indentation.
+- Consistent Ruby block indentation.
+- Alignment of positional and keyword arguments.
+- Formatting of nested keyword hashes.
+- Stable indentation across repeated formatting operations.
 
-```erb
-<%%= form_with model: @task, data: { controller: "b4um-todo", action: "turbo:submit-end->b4um-todo#resetAfterSuccess" }, class: "task-form" do |form| %>
-<div></div>
-<%% end %>
-```
+### Rails Helper Formatting
 
-After:
+The formatter supports selected Rails helpers, including:
 
-```erb
-<%%= form_with model: @task,
-              data: {
-                controller: "b4um-todo",
-                action: "turbo:submit-end->b4um-todo#resetAfterSuccess"
-              },
-              class: "task-form" do |form| %>
-  <div></div>
-<%% end %>
-```
+- `form_with`
+- `form.text_field`
+- `form.label`
+- `form.submit`
+- `render`
+- `render partial:`
+- `link_to`
+- `button_to`
 
-### Example: form.text_field Formatting
+Supported helpers can be formatted across multiple lines with consistent argument alignment.
 
-Before:
-
-```erb
-<%%= form.text_field :name,
-  class: "form-input",
-  placeholder: " ",
-  required: true,
-  autofocus: true,
-  data: {
-    b4um_todo_target: "input",
-    action: "input->b4um-todo#updateSubmitState" } %>
-```
-
-After:
-
-```erb
-<%%= form.text_field :name,
-                    class: "form-input",
-                    placeholder: " ",
-                    required: true,
-                    autofocus: true,
-                    data: {
-                      b4um_todo_target: "input",
-                      action: "input->b4um-todo#updateSubmitState"
-                    } %>
-```
-
-### Example: form.label Formatting
-
-Before:
-
-```erb
-<%%= form.label :name, "Was möchtest du erledigen?", class: "form-label" %>
-```
-
-After:
-
-```erb
-<%%= form.label :name,
-                "Was möchtest du erledigen?",
-                class: "form-label" %>
-```
-
-### Example: form.submit Formatting
-
-Before:
-
-```erb
-<%%= form.submit "Hinzufügen", class: "b4um-todo__button", data: { b4um_todo_target: "submit" } %>
-```
-
-After:
-
-```erb
-<%%= form.submit "Hinzufügen",
-                 class: "b4um-todo__button",
-                 data: {
-                   b4um_todo_target: "submit"
-                 } %>
-```
-
-### Example: render partial Formatting
-
-Before:
-
-```erb
-<%%= render partial: "task", collection: @incomplete_tasks, as: :task %>
-```
-
-After:
-
-```erb
-<%%= render partial: "task",
-             collection: @incomplete_tasks,
-             as: :task %>
-```
-
-The formatter supports `render partial:` calls with multiple keyword arguments.
-
-Simple calls such as `render partial: "task"` remain unchanged.
-
-### Example: Rails link_to Formatting
-
-Regular Rails ERB views support multiline formatting of `link_to` calls.
-
-Before:
-
-```erb
-<%= link_to "Edit", edit_user_path(user), class: "btn btn-primary", data: { turbo_frame: "_top" } %>
-```
-
-After:
-
-```erb
-<%= link_to "Edit",
-            edit_user_path(user),
-            class: "btn btn-primary",
-            data: {
-              turbo_frame: "_top"
-            } %>
-```
-
-### Example: Rails render Formatting
-
-Regular Rails ERB views support multiline formatting of `render` calls.
-
-Before:
-
-```erb
-<%= render "bento", users: @users, title: "Users" %>
-```
-
-After:
-
-```erb
-<%= render "bento",
-           users: @users,
-           title: "Users" %>
-```
-
-### Example: Multiline Rails render Formatting
-
-Version 0.1.6 improves the alignment of multiline `render` arguments.
-
-Before:
-
-```erb
-<% if @users.any? %>
-  <%= render user,
-       compact: true,
-          preview_length: 240 %>
-<% end %>
-```
-
-After:
-
-```erb
-<% if @users.any? %>
-  <%= render user,
-             compact: true,
-             preview_length: 240 %>
-<% end %>
-```
-
-The formatter aligns all continuation arguments consistently.
-
-Repeated formatting does not shift arguments further to the right.
-
-### Example: Ruby case Formatting
-
-Version 0.1.6 introduces improved indentation for multiline Ruby `case` expressions inside ERB blocks.
-
-Before:
-
-```erb
-<% users.each do |user| %>
-  <% card_class =
-       case user.id % 3
-       when 0
-       ["wide", 240]
-         when 1
-       ["soft", 58]
-       else
-         ["normal", 58]
-       end %>
-<% end %>
-```
-
-After:
-
-```erb
-<% users.each do |user| %>
-  <% card_class =
-       case user.id % 3
-       when 0
-         ["wide", 240]
-       when 1
-         ["soft", 58]
-       else
-         ["normal", 58]
-       end %>
-<% end %>
-```
-
-The formatter:
-
-- Aligns `when` branches with the `case` expression.
-- Aligns `else` and `end` with `case`.
-- Indents result expressions consistently.
-- Preserves the original Ruby syntax.
-- Produces stable results when formatting repeatedly.
+Unsupported Ruby expressions and form helpers are preserved without applying potentially unsafe argument formatting.
 
 ### Ruby Syntax Protection
 
-The Prism Ruby parser verifies that formatting changes preserve the original Ruby syntax.
+The extension uses the Prism Ruby parser to verify that formatting changes preserve the original Ruby syntax.
 
-Unsupported Ruby expressions and form helpers are preserved without applying Ruby argument formatting.
+Additional safeguards include:
 
-The formatter also ensures stable results across repeated formatting operations.
+- Protection of embedded ERB expressions.
+- Detection of several malformed Ruby and ERB block structures.
+- Preservation of whitespace inside quoted Ruby strings.
+- Preservation of whitespace inside Ruby heredocs.
+- Prevention of cumulative indentation changes.
+
+The formatter avoids transformations that cannot be verified as safe.
 
 ## Supported File Extensions
 
@@ -332,7 +106,7 @@ The formatter also ensures stable results across repeated formatting operations.
 | `.js.tt`       | b4um Thor JavaScript | No         |
 | `.css.tt`      | b4um Thor CSS        | No         |
 
-Custom ERB syntax highlighting and formatting are implemented for `.html.erb.tt` and `.html.erb` files.
+Custom ERB syntax highlighting and formatting are available for `.html.erb.tt` and `.html.erb` files.
 
 Other Thor template extensions are recognized but do not currently use the custom ERB formatter.
 
@@ -340,17 +114,26 @@ Other Thor template extensions are recognized but do not currently use the custo
 
 ### Install from VSIX
 
-Download `b4um-thor-templates-0.1.6.vsix` from the
-[v0.1.6 GitHub release](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.1.6).
+Download the latest VSIX package from:
+
+[b4um Thor Templates – GitHub Releases](https://github.com/bonsai1972/b4um-thor-templates/releases/latest)
+
+Current package:
+
+`b4um-thor-templates-0.1.6.vsix`
+
+To install:
 
 1. Open Visual Studio Code.
 2. Open the Extensions panel (`Cmd + Shift + X` on macOS).
-3. Click the `...` menu in the Extensions panel.
+3. Open the `...` menu in the Extensions panel.
 4. Select **Install from VSIX...**.
 5. Choose the downloaded `.vsix` file.
 6. Confirm the installation.
 
-The extension can then be used in a normal Visual Studio Code window; the Extension Development Host is not required.
+The extension can then be used in a normal Visual Studio Code window.
+
+The Extension Development Host is not required.
 
 ### Visual Studio Code Marketplace
 
@@ -358,27 +141,27 @@ The extension is not yet available on the Visual Studio Code Marketplace.
 
 Installation is currently provided through GitHub Releases.
 
-## Formatting
+## Usage
 
-### Thor Templates
+### Format Thor Templates
 
 Open a `.html.erb.tt` file in Visual Studio Code.
 
-Open the Command Palette (`Cmd + Shift + P` on macOS) and select:
+Open the Command Palette (`Cmd + Shift + P` on macOS).
+
+Select:
 
 **Format Document With... → b4um Thor Formatter**
 
-The formatter processes HTML structure and supported Ruby expressions while protecting the original Ruby syntax.
-
-### Rails ERB Views
+### Format Rails ERB Views
 
 Open a `.html.erb` file in Visual Studio Code.
 
-Open the Command Palette (`Cmd + Shift + P` on macOS) and select:
+Open the Command Palette (`Cmd + Shift + P` on macOS).
+
+Select:
 
 **Format Document With... → b4um Thor Formatter**
-
-The formatter supports standard Rails ERB syntax and selected Rails helpers.
 
 ### Formatting Behavior
 
@@ -395,7 +178,8 @@ The formatter is designed to produce stable results when formatting the same fil
 ### Requirements
 
 - Visual Studio Code 1.90.0 or newer
-- Node.js and npm
+- Node.js
+- npm
 
 ### Clone the Repository
 
@@ -412,186 +196,59 @@ npm install
 
 ### Run the Extension
 
-Open the project in Visual Studio Code and press **F5** to launch the Extension Development Host.
+Open the project in Visual Studio Code.
+
+Press **F5** to launch the Extension Development Host.
 
 Open a `.html.erb.tt` or `.html.erb` file to test syntax highlighting and formatting.
 
 ## Tests
 
-The project includes **65 automated tests**.
+The project includes automated tests using Vitest.
 
-Run them with:
+Run the test suite with:
 
 ```bash
 npx vitest run
 ```
 
-The test suite covers:
+The tests cover:
 
-- Thor syntax preservation
-- Regular Rails ERB formatting
-- Ruby block indentation
-- Multiline Ruby expressions
-- Ruby `case`, `when`, `else` and `end` indentation
-- `form_with` formatting
-- `form.text_field` formatting
-- `form.label` formatting
-- `form.submit` formatting
-- `render partial:` formatting
-- Rails `render` formatting
-- Rails `link_to` formatting
-- Rails `button_to` formatting
-- Nested Ruby hashes
-- Positional and keyword arguments
-- Consistent alignment of multiline Rails helper arguments
-- Unicode preservation
-- Ruby syntax verification using Prism
-- Unsupported form helper preservation
-- Malformed ERB structures
-- Multiline HTML heading preservation
-- Multiline paragraph preservation
-- Preservation of existing `prettier-ignore` comments
-- Formatting stability and idempotence
-- Integration tests using real b4um generator templates
-
-All **65 tests passed** during development of version 0.1.6.
-
-## Release
-
-**Current version:** 0.1.6
-
-### What's New in v0.1.6
-
-Version 0.1.6 focuses on improved Ruby indentation, consistent Rails helper formatting and reliable formatting of
-regular Rails ERB views.
-
-#### Improved Rails render Formatting
-
-- Improved indentation of multiline `render` calls.
-- Aligns positional and keyword arguments consistently.
-- Prevents indentation from shifting during repeated formatting.
-- Supports multiple continuation arguments within the same ERB expression.
-
-#### Improved Rails link_to Formatting
-
-- Improved alignment of multiline `link_to` arguments.
-- Preserves consistent indentation inside HTML elements and Ruby blocks.
-- Maintains stable formatting across repeated runs.
-
-#### Ruby case Formatting
-
-- Added indentation support for multiline Ruby `case` expressions.
-- Aligns `when`, `else` and `end` with the corresponding `case`.
-- Indents result expressions consistently.
-- Corrects incorrectly indented branches.
-- Preserves Ruby syntax using Prism.
-
-#### Stability and Reliability
-
-- Improved handling of multiline ERB expressions.
-- Prevents cumulative indentation changes.
-- Preserves existing formatting behavior for supported Rails helpers.
-- Expanded automated test coverage from 62 to 65 tests.
-- Verified formatting using real Rails ERB views.
-
-### Previous Release: v0.1.5
-
-Version 0.1.5 introduced regular Rails ERB formatting and improved the formatting capabilities of the existing Thor
-template formatter.
-
-#### Rails ERB Support
-
-- Added formatting support for regular `.html.erb` files.
-- Added a dedicated Rails ERB language registration.
-- Supports standard Rails ERB expressions.
-- Added formatting for Rails `link_to` calls.
-- Added formatting for Rails `render` calls.
-- Improved Ruby argument alignment and indentation.
-
-#### Improved Rails Helper Formatting
-
-- Added and improved formatting for supported `button_to` calls.
-- Improved handling of nested keyword arguments.
-- Improved indentation consistency for multiline Ruby expressions.
-- Preserves unsupported Ruby expressions without unsafe modifications.
-
-#### HTML Formatting Improvements
-
-- Preserves existing multiline text in HTML headings.
-- Preserves existing multiline text in paragraphs.
-- Preserves existing `prettier-ignore` comments.
-- Reduces unwanted changes caused by HTML formatting.
-
-#### Safety and Reliability
-
-- Maintains separation between Thor and regular Rails ERB syntax.
-- Preserves Ruby syntax using the Prism parser.
-- Improves formatting stability across repeated runs.
-- Expanded automated test coverage from 50 to 62 tests.
-- Verified formatting using real Rails ERB views.
-
-The previous release is available from the
-[v0.1.5 GitHub release](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.1.5).
-
-### Previous Release: v0.1.4
-
-Version 0.1.4 introduced:
-
-- Automatic multiline formatting for `form.label` calls.
-- Automatic multiline formatting for `form.submit` calls.
-- Improved indentation of positional and keyword arguments.
-- Improved formatting of nested keyword hashes.
-- Multiline formatting for `render partial:` calls.
-- Stable formatting across repeated runs.
-- 50 automated tests.
-
-The previous release is available from the
-[v0.1.4 GitHub release](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.1.4).
-
-### Previous Release: v0.1.3
-
-Version 0.1.3 introduced:
-
-- Multiline formatting for `form.text_field`.
-- Multiline formatting for `form.label`.
-- Multiline formatting for `form.submit`.
-- Improved indentation of positional and keyword arguments.
-- Support for nested keyword hashes in Rails form helpers.
-- Preservation of unsupported form helpers.
+- Thor syntax preservation.
+- Regular Rails ERB formatting.
+- Ruby block indentation.
+- Multiline Ruby expressions.
+- Rails helper formatting.
+- Nested Ruby hashes.
+- Positional and keyword arguments.
 - Ruby syntax verification using Prism.
-- 47 automated tests.
+- Unicode preservation.
+- Malformed ERB structures.
+- HTML formatting protection.
+- Formatting stability and idempotence.
+- Integration tests using real b4um generator templates.
 
-The previous release is available from the
-[v0.1.3 GitHub release](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.1.3).
+**Version 0.1.6: 65 automated tests passed.**
 
-### Previous Release: v0.1.2
+## Changelog
 
-Version 0.1.2 introduced:
+See [CHANGELOG.md](CHANGELOG.md) for the complete version history and release notes.
 
-- Automatic formatting of long `form_with` calls.
-- Improved indentation of multiline Ruby arguments.
-- Formatting of nested keyword hashes.
-- Unicode-safe Ruby source extraction.
-- Ruby syntax verification using Prism.
-- 43 automated tests.
+## Releases
 
-The previous release is available from the
-[v0.1.2 GitHub release](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.1.2).
+Download the latest version from:
 
-### Download
+[b4um Thor Templates – Latest Release](https://github.com/bonsai1972/b4um-thor-templates/releases/latest)
 
-Download version 0.1.6 from the
-[v0.1.6 GitHub release](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.1.6).
+All published versions are available through GitHub Releases.
 
 ## Status
 
 b4um Thor Templates is under active development.
 
-Version 0.1.6 is the current release version.
-
 The extension is distributed as an installable VSIX package through GitHub Releases.
 
-The extension is not yet published to the Visual Studio Code Marketplace.
+It is not yet published to the Visual Studio Code Marketplace.
 
 ## License
 
