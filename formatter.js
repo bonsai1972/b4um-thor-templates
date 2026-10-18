@@ -600,7 +600,34 @@ function indentRubyBlocks(source) {
     // Fortsetzung einer mehrzeiligen ERB-Anweisung.
     // Diese Zeilen dürfen nicht verändert werden.
     if (insideMultilineErb) {
-      result.push(multilineErbIndent + line)
+      if (multilineErbIndent) {
+        const firstLine = result[result.length - multilineErbText.split('\n').length]
+        const match = firstLine.match(/^(\s*<%=\s*(?:render|link_to|form\.(?:text_field|label|submit))\s+)/)
+
+        if (match) {
+          const indentation = ' '.repeat(match[1].length)
+          result.push(indentation + line.trimStart())
+        } else {
+          result.push(line)
+        }
+      } else {
+        const caseMatch = multilineErbText.match(/\n([ \t]*)case\b/)
+
+        if (caseMatch) {
+          const caseIndent = caseMatch[1]
+          const content = line.trimStart()
+
+          if (/^(when\b|else\b|end\b)/.test(content)) {
+            result.push(caseIndent + content)
+          } else if (content.length > 0) {
+            result.push(caseIndent + '  ' + content)
+          } else {
+            result.push(line)
+          }
+        } else {
+          result.push(line)
+        }
+      }
 
       // Weitere Zeile der mehrzeiligen ERB-Anweisung sammeln.
       multilineErbText += '\n' + line
@@ -914,7 +941,23 @@ async function formatThorTemplate(source) {
     }
 
     if (expectedWithIndentation !== result) {
-      throw new Error(`Thor-/ERB-Anweisung ${index} wurde unerwartet verändert. Formatierung abgebrochen.`)
+      // Ausschließlich Änderungen der führenden Einrückung
+      // innerhalb mehrzeiliger ERB-Anweisungen erlauben.
+      const normalizeIndentation = (text) => {
+        const lines = text.split('\n')
+
+        return [lines[0], ...lines.slice(1).map((line) => line.trimStart())].join('\n')
+      }
+
+      if (normalizeIndentation(expectedWithIndentation) !== normalizeIndentation(result)) {
+        throw new Error(`Thor-/ERB-Anweisung ${index} wurde unerwartet verändert. Formatierung abgebrochen.`)
+      }
+
+      // Auch bei reinen Einrückungsänderungen muss die
+      // Ruby-Syntax unverändert bleiben.
+      if (!(await sameRubySyntax(original, result))) {
+        throw new Error(`Ruby-Syntax in Thor-/ERB-Anweisung ${index} wurde verändert. Formatierung abgebrochen.`)
+      }
     }
 
     // Zusätzlich die Ruby-Syntax mit Prism überprüfen.

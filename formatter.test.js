@@ -1036,3 +1036,73 @@ users: @users %>`
     expect(result).toBe(expected)
   })
 })
+
+describe('Stabile Einrückung mehrzeiliger Rails-Methodenaufrufe', () => {
+  it('verschiebt render-Argumente bei wiederholter Formatierung nicht', async () => {
+    const source = `<% if @users.any? %>
+  <%= render user,
+              compact: true,
+              preview_length: preview_length %>
+<% end %>`
+
+    const first = await formatThorTemplate(source)
+    const second = await formatThorTemplate(first)
+    const third = await formatThorTemplate(second)
+
+    expect(second).toBe(first)
+    expect(third).toBe(first)
+  })
+})
+
+describe('Stabile Einrückung mit mehreren render-Argumenten', () => {
+  it('richtet alle Argumente aus und bleibt beim erneuten Formatieren stabil', async () => {
+    const source = `<% if @users.any? %>
+  <%= render user,
+              compact: true,
+              preview_length: 240 %>
+<% end %>`
+
+    const first = await formatThorTemplate(source)
+    const second = await formatThorTemplate(first)
+
+    expect(first).toContain(
+      '  <%= render user,\n' + '             compact: true,\n' + '             preview_length: 240 %>'
+    )
+
+    expect(second).toBe(first)
+  })
+})
+
+describe('Mehrzeilige Ruby-case-Anweisungen', () => {
+  it('richtet case, when, else und end korrekt aus', async () => {
+    const source = `<% users.each do |user| %>
+  <% card_class =
+       case user.id % 3
+       when 0
+       ["wide", 240]
+         when 1
+       ["soft", 58]
+       else
+         ["normal", 58]
+       end %>
+<% end %>`
+
+    const expected = `<% users.each do |user| %>
+  <% card_class =
+       case user.id % 3
+       when 0
+         ["wide", 240]
+       when 1
+         ["soft", 58]
+       else
+         ["normal", 58]
+       end %>
+<% end %>`
+
+    const first = await formatThorTemplate(source)
+    const second = await formatThorTemplate(first)
+
+    expect(first.trim()).toBe(expected.trim())
+    expect(second).toBe(first)
+  })
+})
