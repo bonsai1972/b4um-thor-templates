@@ -2,7 +2,7 @@
   "name": "b4um-thor-templates",
   "displayName": "b4um Thor Templates",
   "description": "Syntax highlighting for Ruby on Rails Thor generator templates.",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "publisher": "b4um",
   "repository": {
     "type": "git",
@@ -13,6 +13,10 @@
     "vscode": "^1.90.0"
   },
   "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:b4um-thor-erb",
+    "onLanguage:b4um-rails-erb"
+  ],
   "categories": [
     "Programming Languages"
   ],
