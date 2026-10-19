@@ -5,6 +5,13 @@ All notable changes to b4um Thor Templates are documented in this file.
 The project provides syntax highlighting and formatting support for Ruby on Rails Thor generator templates and regular
 Rails ERB views in Visual Studio Code.
 
+## [0.1.8] - Unreleased
+
+### Added
+
+- Added a custom extension icon featuring the original b4um signature.
+- Improved visual identification of b4um Thor Templates in Visual Studio Code.
+
 ## [0.1.7] - 2026-10-18
 
 ### Documentation

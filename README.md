@@ -3,7 +3,7 @@
 Syntax highlighting and formatting support for Ruby on Rails Thor generator templates and regular Rails ERB views in
 Visual Studio Code.
 
-**Current Version:** 0.1.6
+**Current Version:** 0.1.8
 
 ## Overview
 
@@ -120,7 +120,7 @@ Download the latest VSIX package from:
 
 Current package:
 
-`b4um-thor-templates-0.1.6.vsix`
+`b4um-thor-templates-0.1.8.vsix`
 
 To install:
 
@@ -228,7 +228,7 @@ The tests cover:
 - Formatting stability and idempotence.
 - Integration tests using real b4um generator templates.
 
-**Version 0.1.6: 65 automated tests passed.**
+**Version 0.1.8: 65 automated tests passed.**
 
 ## Changelog
 

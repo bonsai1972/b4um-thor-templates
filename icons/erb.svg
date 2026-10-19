@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="24"
+     height="24"
+     viewBox="0 0 24 24">
+
+  <!-- Äußere Form -->
+  <path
+    d="M10 3H21V21H3V10L10 3Z
+       M10.8 5.5L5.5 10.8V18.5H18.5V5.5H10.8Z"
+    fill="#C51F32"
+    fill-rule="evenodd"
+  />
+
+  <!-- Inneres Dreieck -->
+<path
+  d="M6.5 11.5L10.5 7.5L18 17.5H6.5V11.5Z"
+  fill="#E53945"
+/>
+
+</svg>
