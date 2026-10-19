@@ -3,7 +3,7 @@
 Syntax highlighting and formatting support for Ruby on Rails Thor generator templates and regular Rails ERB views in
 Visual Studio Code.
 
-**Current Version:** 0.2.0
+**Current Version:** 0.2.1
 
 ## Overview
 
@@ -98,7 +98,9 @@ The formatter supports selected Rails helpers, including:
 
 Supported helpers can be formatted across multiple lines with consistent argument alignment.
 
-Nested `data` attributes are formatted with consistent indentation.
+Nested `data` attributes and Ruby hashes are formatted with two additional spaces per nesting level.
+
+Curly braces inside quoted Ruby strings do not affect hash indentation.
 
 Formatting preserves Ruby syntax and produces stable results across repeated operations.
 
@@ -142,7 +144,7 @@ Download the latest VSIX package from:
 
 Current package:
 
-`b4um-thor-templates-0.2.0.vsix`
+`b4um-thor-templates-0.2.1.vsix`
 
 To install:
 
@@ -254,8 +256,9 @@ The tests cover:
 - HTML formatting protection.
 - Formatting stability and idempotence.
 - Integration tests using real b4um generator templates.
+- Curly braces inside Ruby strings do not affect argument indentation.
 
-**Version 0.2.0: 89 automated tests passed.**
+**Version 0.2.1: 92 automated tests passed.**
 
 ## Changelog
 

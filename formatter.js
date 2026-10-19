@@ -645,18 +645,8 @@ function indentRubyBlocks(source) {
         // die noch nicht in der Zeile enthalten ist.
         const firstLine = multilineErbText.split('\n')[0]
 
-        const renderMatch = firstLine.match(/^(\s*<%%?=\s*render\s+)/)
-
-        if (renderMatch) {
-          // Folgeargumente von render einheitlich ausrichten.
-          const content = line.trimStart()
-          const indentation = ' '.repeat(renderMatch[1].length + 2)
-
-          result.push(indentation + content)
-        } else {
-          // Alle anderen mehrzeiligen ERB-Anweisungen unverändert lassen.
-          result.push(line)
-        }
+        // Die bereits berechnete Einrückung beibehalten.
+        result.push(line)
       } else {
         const caseMatch = multilineErbText.match(/\n([ \t]*)case\b/)
 
@@ -758,6 +748,111 @@ function indentRubyBlocks(source) {
   }
 
   return result.join('\n')
+}
+
+function alignRubyArguments(source) {
+  const lines = source.split('\n')
+
+  for (let index = 0; index < lines.length; index++) {
+    const match = lines[index].match(
+      new RegExp(`^(\\s*<%%?=\\s*(?:link_to|render|form\\.(${FORM_HELPER_PATTERN}))\\s+)`)
+    )
+
+    if (!match) {
+      continue
+    }
+
+    // Einzeilige ERB-Anweisungen besitzen keine Folgeargumente.
+    if (lines[index].includes('%>')) {
+      continue
+    }
+
+    const targetIndent = match[1].length
+    let hashDepth = 0
+
+    for (let next = index + 1; next < lines.length; next++) {
+      const content = lines[next].trimStart()
+
+      // Geschweifte Klammern außerhalb von Ruby-Strings ermitteln.
+      let openingCount = 0
+      let closingCount = 0
+      let leadingClosings = 0
+
+      let quote = null
+      let escaped = false
+      let comment = false
+      let beforeCode = true
+
+      for (const char of content) {
+        if (comment) {
+          break
+        }
+
+        if (escaped) {
+          escaped = false
+          continue
+        }
+
+        if (quote) {
+          if (char === '\\') {
+            escaped = true
+          } else if (char === quote) {
+            quote = null
+          }
+
+          continue
+        }
+
+        if (char === '"' || char === "'") {
+          quote = char
+          beforeCode = false
+          continue
+        }
+
+        if (char === '#') {
+          comment = true
+          break
+        }
+
+        if (char === '{') {
+          openingCount++
+          beforeCode = false
+          continue
+        }
+
+        if (char === '}') {
+          closingCount++
+
+          if (beforeCode) {
+            leadingClosings++
+          }
+
+          continue
+        }
+
+        if (!/\s/.test(char)) {
+          beforeCode = false
+        }
+      }
+
+      // Schließende Klammern am Zeilenanfang gehören zur äußeren Ebene.
+      hashDepth = Math.max(0, hashDepth - leadingClosings)
+
+      const indent = targetIndent + hashDepth * 2
+
+      lines[next] = ' '.repeat(indent) + content
+
+      // Verschachtelung für die nächste Zeile aktualisieren.
+      hashDepth = Math.max(0, hashDepth + openingCount - (closingCount - leadingClosings))
+
+      if (content.includes('%>')) {
+        index = next
+        break
+      }
+    }
+  }
+
+  return lines.join('\n')
 }
 
 /**
@@ -909,7 +1004,7 @@ async function formatThorTemplate(source) {
           return block
         }
 
-        const targetColumn = indentation.length + firstArgument[1].length
+        const targetColumn = indentation.length + firstLine.search(/\S/) + firstArgument[1].length
 
         return [
           firstLine,
@@ -942,7 +1037,7 @@ async function formatThorTemplate(source) {
   )
 
   // Ruby-Blöcke zusätzlich einrücken.
-  const indented = indentRubyBlocks(cleanedHtml)
+  const indented = alignRubyArguments(indentRubyBlocks(cleanedHtml))
 
   // Sicherstellen, dass alle ERB-/Thor-Anweisungen
   // bei der Formatierung unverändert geblieben sind.

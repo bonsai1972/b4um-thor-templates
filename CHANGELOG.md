@@ -5,7 +5,30 @@ All notable changes to b4um Thor Templates are documented in this file.
 The project provides syntax highlighting and formatting support for Ruby on Rails Thor generator templates and regular
 Rails ERB views in Visual Studio Code.
 
-## [0.2.0] - Unreleased
+## [0.2.1] - Unreleased
+
+### Fixed
+
+- Fixed incorrect indentation of nested Ruby hashes in multiline Rails form helpers.
+- Fixed curly braces inside Ruby strings incorrectly affecting argument indentation.
+- Fixed indentation inconsistencies when formatting nested `data` attributes.
+
+### Improved
+
+- Improved Ruby argument alignment for multiline Rails helpers.
+- Improved handling of quoted strings and escaped quotation marks.
+- Improved formatting stability for nested Ruby hashes.
+
+### Tests
+
+- Expanded automated test coverage from 89 to 92 tests.
+- Added regression tests for curly braces inside Ruby strings.
+- Verified formatting directly in the Visual Studio Code Extension Development Host.
+- All 92 automated tests passed.
+
+---
+
+## [0.2.0] - 2026-10-19
 
 ### Added
 
