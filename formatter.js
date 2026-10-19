@@ -1,6 +1,39 @@
 const prettier = require('prettier')
 const { loadPrism } = require('@ruby/prism')
 
+// Unterstützte Rails-Formularmethoden.
+const FORM_HELPERS = [
+  'text_field',
+  'email_field',
+  'password_field',
+  'text_area',
+  'number_field',
+  'date_field',
+  'datetime_field',
+  'datetime_local_field',
+  'time_field',
+  'telephone_field',
+  'phone_field',
+  'url_field',
+  'search_field',
+  'file_field',
+  'hidden_field',
+  'color_field',
+  'range_field',
+  'label',
+  'check_box',
+  'radio_button',
+  'select',
+  'collection_select',
+  'grouped_collection_select',
+  'collection_check_boxes',
+  'collection_radio_buttons',
+  'submit',
+  'button'
+]
+
+const FORM_HELPER_PATTERN = FORM_HELPERS.join('|')
+
 // Ruby-Parser einmalig initialisieren und wiederverwenden.
 let prismParserPromise = null
 
@@ -29,7 +62,7 @@ async function parseFormWith(erb) {
   const ruby = match[1].trim()
 
   const isFormWith = ruby.startsWith('form_with ')
-  const isFormHelper = /^form\.(?:text_field|label|submit)\b/.test(ruby)
+  const isFormHelper = new RegExp(`^form\\.(${FORM_HELPER_PATTERN})\\b`).test(ruby)
   const isRenderPartial = /^render\s+(?:partial\s*:|["'])/.test(ruby)
   const isButtonTo = /^button_to\b/.test(ruby)
   const isLinkTo = erb.startsWith('<%=') && /^link_to\b/.test(ruby)
@@ -81,7 +114,7 @@ async function parseFormWith(erb) {
   }
 
   if (
-    !['text_field', 'label', 'submit'].includes(call.name) ||
+    !FORM_HELPERS.includes(call.name) ||
     call.receiver?.constructor.name !== 'CallNode' ||
     call.receiver.name !== 'form'
   ) {
@@ -191,6 +224,9 @@ async function formatFormWith(erb) {
       ? call.name
       : `form.${call.name}`
   const prefix = `${opening}${whitespace}${methodName} `
+
+  // Folgeargumente beginnen an derselben Spalte
+  // wie das erste Argument.
   const continuationIndent = ' '.repeat(prefix.length)
 
   const formattedArguments = [
@@ -220,8 +256,9 @@ async function formatFormWith(erb) {
         )
       )
     ) {
-      const nestedIndent =
-        call.name === 'button_to' ? ' '.repeat(continuationIndent.length + 2) : ' '.repeat(prefix.length + 1)
+      // Hash-Einträge stehen zwei Leerzeichen weiter rechts
+      // als das zugehörige Keyword-Argument.
+      const nestedIndent = ' '.repeat(continuationIndent.length + 2)
 
       const nestedArguments = value.elements.map((nested) => {
         const nestedValue = nested.value
@@ -601,13 +638,23 @@ function indentRubyBlocks(source) {
     // Diese Zeilen dürfen nicht verändert werden.
     if (insideMultilineErb) {
       if (multilineErbIndent) {
-        const firstLine = result[result.length - multilineErbText.split('\n').length]
-        const match = firstLine.match(/^(\s*<%=\s*(?:render|link_to|form\.(?:text_field|label|submit))\s+)/)
+        // Die relative Einrückung der mehrzeiligen
+        // Ruby-Anweisung erhalten.
+        //
+        // Nur die zusätzliche Ruby-Blocktiefe ergänzen,
+        // die noch nicht in der Zeile enthalten ist.
+        const firstLine = multilineErbText.split('\n')[0]
 
-        if (match) {
-          const indentation = ' '.repeat(match[1].length)
-          result.push(indentation + line.trimStart())
+        const renderMatch = firstLine.match(/^(\s*<%%?=\s*render\s+)/)
+
+        if (renderMatch) {
+          // Folgeargumente von render einheitlich ausrichten.
+          const content = line.trimStart()
+          const indentation = ' '.repeat(renderMatch[1].length + 2)
+
+          result.push(indentation + content)
         } else {
+          // Alle anderen mehrzeiligen ERB-Anweisungen unverändert lassen.
           result.push(line)
         }
       } else {
@@ -664,7 +711,9 @@ function indentRubyBlocks(source) {
       insideMultilineErb = true
       multilineErbText = line
 
-      multilineErbIndent = /^(?:<%%?=\s*form\.(?:text_field|label|submit)\b|<%=\s*(?:render|link_to)\b)/.test(trimmed)
+      multilineErbIndent = new RegExp(
+        `^(?:<%%?=\\s*form\\.(${FORM_HELPER_PATTERN})\\b|<%=\\s*(?:render|link_to)\\b)`
+      ).test(trimmed)
         ? '  '.repeat(rubyDepth)
         : ''
 
@@ -853,7 +902,7 @@ async function formatThorTemplate(source) {
 
         const firstLine = lines[0]
         const firstArgument = firstLine.match(
-          /^(<%%?=\s*(?:form_with|form\.(?:text_field|label|submit)|render|button_to|link_to)\s+)/
+          new RegExp(`^(<%%?=\\s*(?:form_with|form\\.(${FORM_HELPER_PATTERN})|render|button_to|link_to)\\s+)`)
         )
 
         if (!firstArgument) {

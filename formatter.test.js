@@ -94,8 +94,8 @@ describe('b4um Thor Formatter', () => {
 
     const expected = `<%%= form_with model: @task,
                data: {
-                controller: "b4um-todo",
-                action: "turbo:submit-end->b4um-todo#resetAfterSuccess"
+                 controller: "b4um-todo",
+                 action: "turbo:submit-end->b4um-todo#resetAfterSuccess"
                },
                class: "task-form" do |form| %>
   <div></div>
@@ -119,8 +119,8 @@ class: "task-form" do |form| %>
 
     const expected = `<%%= form_with model: @task,
                data: {
-                controller: "b4um-todo",
-                action: "turbo:submit-end->b4um-todo#resetAfterSuccess"
+                 controller: "b4um-todo",
+                 action: "turbo:submit-end->b4um-todo#resetAfterSuccess"
                },
                class: "task-form" do |form| %>
   <div></div>
@@ -142,9 +142,9 @@ class: "task-form" do |form| %>
 
     const expected = `<%%= form_with model: @task,
                data: {
-                title: "Schöne Grüße",
-                controller: "b4um-todo",
-                action: "turbo:submit-end->b4um-todo#resetAfterSuccess"
+                 title: "Schöne Grüße",
+                 controller: "b4um-todo",
+                 action: "turbo:submit-end->b4um-todo#resetAfterSuccess"
                },
                class: "task-form" do |form| %>
   <div></div>
@@ -182,8 +182,8 @@ class: "task-form" do |form| %>
                      required: true,
                      autofocus: true,
                      data: {
-                      b4um_todo_target: "input",
-                      action: "input->b4um-todo#updateSubmitState"
+                       b4um_todo_target: "input",
+                       action: "input->b4um-todo#updateSubmitState"
                      } %>
 `
 
@@ -223,8 +223,8 @@ class: "task-form" do |form| %>
     const expected = `<%%= form.label :name,
                 class: "form-label",
                 data: {
-                 controller: "tooltip",
-                 action: "click->tooltip#show"
+                  controller: "tooltip",
+                  action: "click->tooltip#show"
                 } %>
 `
 
@@ -241,7 +241,7 @@ class: "task-form" do |form| %>
     const expected = `<%%= form.submit "Hinzufügen",
                  class: "b4um-todo__button",
                  data: {
-                  b4um_todo_target: "submit"
+                   b4um_todo_target: "submit"
                  } %>
 `
 
@@ -262,8 +262,8 @@ class: "task-form" do |form| %>
     const expected = `<%%= form.submit "Speichern",
                  class: "btn btn-primary",
                  data: {
-                  turbo_submits_with: "Wird gespeichert...",
-                  disable_with: "Bitte warten"
+                   turbo_submits_with: "Wird gespeichert...",
+                   disable_with: "Bitte warten"
                  } %>
 `
 
@@ -305,6 +305,127 @@ class: "task-form" do |form| %>
     // Unbekannte Methoden dürfen nicht durch unsere
     // Formularformatierung verändert werden.
     expect(result).toContain(source)
+  })
+
+  describe('Rails-Formularfelder und Formularelemente', () => {
+    const formHelpers = [
+      'text_field',
+      'email_field',
+      'password_field',
+      'text_area',
+      'number_field',
+      'date_field',
+      'datetime_field',
+      'datetime_local_field',
+      'time_field',
+      'telephone_field',
+      'phone_field',
+      'url_field',
+      'search_field',
+      'file_field',
+      'hidden_field',
+      'color_field',
+      'range_field',
+      'check_box',
+      'radio_button'
+    ]
+
+    it.each(formHelpers)('formatiert form.%s mit korrekt ausgerichteten Argumenten', async (method) => {
+      const source = `<%%= form.${method} :name, class: "form-input", data: { controller: "validation", action: "blur->validation#check" } %>`
+
+      const prefix = `<%%= form.${method} `
+      const indent = ' '.repeat(prefix.length)
+
+      const expected = [
+        `${prefix}:name,`,
+        `${indent}class: "form-input",`,
+        `${indent}data: {`,
+        `${indent}  controller: "validation",`,
+        `${indent}  action: "blur->validation#check"`,
+        `${indent}} %>`,
+        ''
+      ].join('\n')
+
+      const result = await formatThorTemplate(source)
+
+      expect(result).toBe(expected)
+      expect(await formatThorTemplate(result)).toBe(expected)
+      expect(await sameRubySyntax(source, result.trimEnd())).toBe(true)
+    })
+
+    it('formatiert email_field mit mehreren Argumenten', async () => {
+      const source = `<%%= form.email_field :email, class: "form-input", placeholder: " ", required: true %>`
+
+      const expected = `<%%= form.email_field :email,
+                      class: "form-input",
+                      placeholder: " ",
+                      required: true %>
+`
+
+      const result = await formatThorTemplate(source)
+
+      expect(result).toBe(expected)
+      expect(await formatThorTemplate(result)).toBe(expected)
+      expect(await sameRubySyntax(source, result.trimEnd())).toBe(true)
+    })
+
+    it('formatiert password_field mit mehreren Argumenten', async () => {
+      const source = `<%%= form.password_field :password, class: "form-input", placeholder: " ", required: true %>`
+
+      const expected = `<%%= form.password_field :password,
+                         class: "form-input",
+                         placeholder: " ",
+                         required: true %>
+`
+
+      const result = await formatThorTemplate(source)
+
+      expect(result).toBe(expected)
+      expect(await formatThorTemplate(result)).toBe(expected)
+      expect(await sameRubySyntax(source, result.trimEnd())).toBe(true)
+    })
+
+    it('formatiert submit mit mehreren data-Attributen', async () => {
+      const source = `<%%= form.submit "Speichern", class: "btn-primary", data: { turbo: false, confirm: "Wirklich speichern?", disable_with: "Wird gespeichert..." } %>`
+
+      const expected = `<%%= form.submit "Speichern",
+                 class: "btn-primary",
+                 data: {
+                   turbo: false,
+                   confirm: "Wirklich speichern?",
+                   disable_with: "Wird gespeichert..."
+                 } %>
+`
+
+      const result = await formatThorTemplate(source)
+
+      expect(result).toBe(expected)
+      expect(await formatThorTemplate(result)).toBe(expected)
+      expect(await sameRubySyntax(source, result.trimEnd())).toBe(true)
+    })
+
+    it('lässt ein Formularfeld ohne zusätzliche Argumente einzeilig', async () => {
+      const source = `<%%= form.email_field :email %>`
+
+      const result = await formatThorTemplate(source)
+
+      expect(result).toBe(source + '\n')
+    })
+
+    it('formatiert normale Rails-ERB-Formularfelder', async () => {
+      const source = `<%= form.email_field :email, class: "form-input", required: true %>`
+
+      const expected = `<%= form.email_field :email,
+                     class: "form-input",
+                     required: true %>
+`
+
+      const result = await formatThorTemplate(source)
+
+      expect(result).toBe(expected)
+      expect(await formatThorTemplate(result)).toBe(expected)
+      expect(await sameRubySyntax(source, result.trimEnd())).toBe(true)
+    })
   })
 
   describe('Ruby-Blockerkennung', () => {
@@ -438,7 +559,9 @@ describe('Echte b4um Generator-Templates', () => {
       }
 
       // Nur unterstützte Rails-Formularhelfer und render partial dürfen verändert werden.
-      expect(original).toMatch(/^<%%?=\s*(?:form_with\b|form\.(?:text_field|label|submit)\b|render\s+partial\s*:)/)
+      expect(original).toMatch(
+        /^<%%?=\s*(?:form_with\b|form\.[a-z_]+(?:_field|_button|_select|_boxes|_buttons)?\b|render\s+partial\s*:)/
+      )
 
       // Die Änderung muss unserer Formatierung entsprechen.
       // Zusätzliche HTML-Einrückung ist bei Folgezeilen erlaubt.
@@ -457,6 +580,20 @@ describe('Echte b4um Generator-Templates', () => {
 
         return line.length - line.trimStart().length - (expectedLine.length - expectedLine.trimStart().length)
       })
+
+      if (new Set(indentationOffsets).size !== 1) {
+        console.log('\nOriginal:')
+        console.log(original)
+
+        console.log('\nErwartete Formatierung:')
+        console.log(expected)
+
+        console.log('\nTatsächliche Formatierung:')
+        console.log(formatted)
+
+        console.log('\nEinrückungsunterschiede:')
+        console.log(indentationOffsets)
+      }
 
       // Alle Folgezeilen müssen dieselbe zusätzliche Einrückung erhalten.
       expect(new Set(indentationOffsets).size).toBe(1)

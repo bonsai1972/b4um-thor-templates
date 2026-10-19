@@ -3,7 +3,7 @@
   "displayName": "b4um Thor Templates",
   "description": "Syntax highlighting for Ruby on Rails Thor generator templates.",
   "icon": "icons/b4um-icon.png",
-  "version": "0.1.8",
+  "version": "0.2.0",
   "publisher": "b4um",
   "repository": {
     "type": "git",

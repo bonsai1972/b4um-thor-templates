@@ -3,7 +3,7 @@
 Syntax highlighting and formatting support for Ruby on Rails Thor generator templates and regular Rails ERB views in
 Visual Studio Code.
 
-**Current Version:** 0.1.8
+**Current Version:** 0.2.0
 
 ## Overview
 
@@ -71,6 +71,24 @@ The formatter supports selected Rails helpers, including:
 
 - `form_with`
 - `form.text_field`
+- `form.email_field`
+- `form.password_field`
+- `form.text_area`
+- `form.number_field`
+- `form.date_field`
+- `form.datetime_field`
+- `form.datetime_local_field`
+- `form.time_field`
+- `form.telephone_field`
+- `form.phone_field`
+- `form.url_field`
+- `form.search_field`
+- `form.file_field`
+- `form.hidden_field`
+- `form.color_field`
+- `form.range_field`
+- `form.check_box`
+- `form.radio_button`
 - `form.label`
 - `form.submit`
 - `render`
@@ -79,6 +97,10 @@ The formatter supports selected Rails helpers, including:
 - `button_to`
 
 Supported helpers can be formatted across multiple lines with consistent argument alignment.
+
+Nested `data` attributes are formatted with consistent indentation.
+
+Formatting preserves Ruby syntax and produces stable results across repeated operations.
 
 Unsupported Ruby expressions and form helpers are preserved without applying potentially unsafe argument formatting.
 
@@ -120,7 +142,7 @@ Download the latest VSIX package from:
 
 Current package:
 
-`b4um-thor-templates-0.1.8.vsix`
+`b4um-thor-templates-0.2.0.vsix`
 
 To install:
 
@@ -218,9 +240,14 @@ The tests cover:
 - Regular Rails ERB formatting.
 - Ruby block indentation.
 - Multiline Ruby expressions.
-- Rails helper formatting.
+- Ruby case, when, else and end indentation.
+- Rails helper formatting (form_with, render, link_to, button_to).
+- Rails form field formatting (text_field, email_field, password_field, and other supported input helpers).
+- Rails form.label and form.submit formatting.
+- Multiline Rails form helper arguments.
+- Nested data attributes in Rails forms.
 - Nested Ruby hashes.
-- Positional and keyword arguments.
+- Positional and keyword argument alignment.
 - Ruby syntax verification using Prism.
 - Unicode preservation.
 - Malformed ERB structures.
@@ -228,7 +255,7 @@ The tests cover:
 - Formatting stability and idempotence.
 - Integration tests using real b4um generator templates.
 
-**Version 0.1.8: 65 automated tests passed.**
+**Version 0.2.0: 89 automated tests passed.**
 
 ## Changelog
 
