@@ -1,0 +1,19 @@
+<%% content_for :title, "Admin" %>
+
+<div class="page-header">
+  <h1>Admin</h1>
+</div>
+
+<div class="b4um-grid">
+  <section class="b4um-card b4um-card--full">
+    <h2>User management</h2>
+
+    <p>
+      Manage registered users and administrator permissions.
+    </p>
+
+    <%%= link_to "Manage users",
+                admin_users_path,
+                class: "button button--primary" %>
+  </section>
+</div>

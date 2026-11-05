@@ -1,5 +1,6 @@
 const prettier = require('prettier')
 const { loadPrism } = require('@ruby/prism')
+const { protectThorTags } = require('./thor-protection')
 
 // Unterstützte Rails-Formularmethoden.
 const FORM_HELPERS = [
@@ -144,7 +145,7 @@ function rubyNodeText(source, node) {
  * Bestehende Ruby-Ausdrücke werden aus dem Originalcode
  * übernommen. Nur die Anordnung wird verändert.
  */
-async function formatFormWith(erb) {
+async function formatFormWith(erb, options = {}) {
   const call = await parseFormWith(erb)
 
   if (!call) {
@@ -167,7 +168,7 @@ async function formatFormWith(erb) {
 
   // form_with nur bei langen oder bereits mehrzeiligen Aufrufen formatieren.
   // Unterstützte Formularhelfer dürfen auch kurze einzeilige Aufrufe umbrechen.
-  if (call.name === 'form_with' && !ruby.includes('\n') && erb.length <= 100) {
+  if (call.name === 'form_with' && !ruby.includes('\n') && erb.length <= (options.printWidth ?? 100)) {
     return erb
   }
 
@@ -402,6 +403,20 @@ function findErbBlocks(source) {
     // Thor verwendet <%% statt <%.
     if (source[index] === '%') {
       index++
+    }
+
+    // ERB-Kommentare enden am nächsten %>; ihr # ist kein Ruby-Zeilenkommentar.
+    if (source[index] === '#') {
+      const commentEnd = source.indexOf('%>', index + 1)
+
+      if (commentEnd === -1) {
+        throw new Error('ERB-Kommentar wurde nicht geschlossen.')
+      }
+
+      const end = commentEnd + 2
+      blocks.push({ start, end, text: source.slice(start, end) })
+      position = end
+      continue
     }
 
     let quote = null
@@ -858,7 +873,7 @@ function alignRubyArguments(source) {
 /**
  * Formatiert ein Thor-/ERB-Template.
  */
-async function formatThorTemplate(source) {
+async function formatThorTemplate(source, options = {}) {
   // Vor der Formatierung prüfen, ob alle ERB-Anweisungen
   // ordnungsgemäß geschlossen sind.
   // ERB-Markierungen vor der Formatierung überprüfen.
@@ -898,7 +913,7 @@ async function formatThorTemplate(source) {
     // Lange form_with-Anweisungen mit Prism formatieren.
     let formattedBlock = cleanedBlock
 
-    const candidate = await formatFormWith(cleanedBlock)
+    const candidate = await formatFormWith(cleanedBlock, options)
 
     if (candidate !== cleanedBlock) {
       // Änderungen nur übernehmen, wenn die Ruby-Syntax
@@ -954,7 +969,7 @@ async function formatThorTemplate(source) {
     parser: 'html',
     tabWidth: 2,
     useTabs: false,
-    printWidth: 100,
+    printWidth: options.printWidth ?? 100,
     htmlWhitespaceSensitivity: 'ignore',
     singleAttributePerLine: true,
     bracketSameLine: false
@@ -1064,7 +1079,7 @@ async function formatThorTemplate(source) {
 
     // Nur Änderungen akzeptieren, die unsere eigene
     // form_with-Formatierung erzeugt hat.
-    const expected = await formatFormWith(original)
+    const expected = await formatFormWith(original, options)
 
     // Zusätzliche HTML-Einrückung nur bei unterstützten
     // und tatsächlich formatierten Ruby-Anweisungen erlauben.
@@ -1113,7 +1128,30 @@ async function formatThorTemplate(source) {
   return indented
 }
 
+/**
+ * Formatiert die spätere Rails-View. Generator-Anweisungen werden geschützt,
+ * maskierte Rails-Anweisungen mit ihrer späteren Länge formatiert.
+ */
+async function formatThorErb(source, options = {}) {
+  if (typeof source !== 'string') {
+    throw new TypeError('Source must be a string')
+  }
+
+  const { text, restore } = protectThorTags(source, 'erb')
+  const formatted = await formatThorTemplate(text, { printWidth: 80, ...options })
+  const blocks = findErbBlocks(formatted)
+  let escaped = formatted
+
+  // Rückwärts ersetzen, damit die ursprünglichen Positionen gültig bleiben.
+  for (const block of blocks.reverse()) {
+    escaped = escaped.slice(0, block.start) + '<%' + escaped.slice(block.start + 1)
+  }
+
+  return restore(escaped)
+}
+
 module.exports = {
+  formatThorErb,
   formatThorTemplate,
   classifyRubyBlock,
   indentRubyBlocks,

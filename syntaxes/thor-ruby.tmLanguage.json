@@ -1,0 +1,38 @@
+{
+  "name": "b4um Thor Ruby",
+  "scopeName": "source.ruby.thor",
+  "patterns": [
+    {
+      "include": "#thor"
+    },
+    {
+      "include": "source.ruby"
+    }
+  ],
+  "repository": {
+    "thor": {
+      "patterns": [
+        {
+          "name": "meta.embedded.block.thor.ruby",
+          "begin": "<%%?=?-?",
+          "end": "-?%>",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.section.embedded.begin.erb"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.section.embedded.end.erb"
+            }
+          },
+          "patterns": [
+            {
+              "include": "source.ruby"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

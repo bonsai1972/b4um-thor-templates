@@ -5,9 +5,14 @@
 # VS Code development
 .vscode/
 .vscode-test/
+.ruby-lsp/
 
 # Tests and fixtures
 formatter.test.js
+ruby-formatter.test.js
+thor-protection.test.js
+extension.test.js
+template-output.test.js
 fixtures/
 
 # Development files

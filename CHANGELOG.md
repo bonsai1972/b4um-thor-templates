@@ -5,6 +5,51 @@ All notable changes to b4um Thor Templates are documented in this file.
 The project provides syntax highlighting and formatting support for Ruby on Rails Thor generator templates and regular
 Rails ERB views in Visual Studio Code.
 
+## [0.2.2] - 2026-11-05
+
+### Added
+
+- Added formatting for regular `.rb` files using VS Code's Ruby language mode.
+- Added Ruby syntax highlighting and formatting for `.rb.tt` and `.rake.tt` templates.
+- Added `.erb.tt` and `.erb` file associations and default formatter selection for the extension's Ruby/ERB languages.
+- Added `b4umThorTemplates.printWidth` and `b4umThorTemplates.rubyExecutablePath` settings.
+
+### Improved
+
+- Format Ruby directly with Syntax Tree using a Ruby subprocess; Prettier remains responsible for HTML formatting.
+- Preserve existing multiline Ruby argument lists, including nested calls, and align continuation lines.
+- Format `add_column` and `redirect_to` calls with keyword options across multiple lines regardless of line width.
+- Avoid extra indentation for arrays and hashes passed as a single keyword value, including `render turbo_stream:`.
+- Format escaped Rails ERB using the generated view's indentation and argument columns.
+- Trim standalone Thor directives in ERB templates to avoid generated blank lines.
+- Process regular Ruby files directly, preserving ERB text inside strings and heredocs as Ruby content.
+
+### Fixed
+
+- Fixed ERB comment detection.
+- Protect Thor expressions against placeholder collisions, lost tags, and unsafe inline control directives.
+- Open the project folder when launching the Extension Development Host and add a workspace association for `.rake.tt`.
+- Configure the development workspace to use this Ruby formatter and disable the standalone RuboCop extension there.
+- Exclude tests, fixtures, editor configuration, and generated Ruby LSP files from the VSIX.
+
+### Requirements
+
+- Ruby formatting requires a local Ruby installation with the `syntax_tree` and `prettier_print` gems.
+- HTML/ERB formatting continues to work without a local Ruby executable.
+- Ruby formatting uses no Prettier Ruby plugin or separate Prettier VS Code extension.
+
+### Tests
+
+- All 193 automated tests passed across five test files.
+- Added VS Code provider tests for regular Ruby, Ruby/Rake templates, error handling, and configuration.
+- Added generated-output checks using Ruby ERB evaluation, Ruby syntax checks, and Rails Erubi compilation.
+- Added checks for all four admin/blocked migration combinations and Rake task registration with different generated fields.
+- Verified repeated formatting stability, Thor protection, and Ruby string/heredoc values.
+
+### Release
+
+[GitHub Release v0.2.2](https://github.com/bonsai1972/b4um-thor-templates/releases/tag/v0.2.2)
+
 ## [0.2.1] - 2026-10-19
 
 ### Fixed

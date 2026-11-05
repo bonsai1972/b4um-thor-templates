@@ -1,9 +1,9 @@
 {
   "name": "b4um-thor-templates",
   "displayName": "b4um Thor Templates",
-  "description": "Syntax highlighting for Ruby on Rails Thor generator templates.",
+  "description": "Syntax highlighting and formatting for Ruby and Rake Thor templates, Ruby files, and Rails ERB views.",
   "icon": "icons/b4um-icon.png",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "publisher": "b4um",
   "repository": {
     "type": "git",
@@ -16,7 +16,9 @@
   "main": "./extension.js",
   "activationEvents": [
     "onLanguage:b4um-thor-erb",
-    "onLanguage:b4um-rails-erb"
+    "onLanguage:b4um-rails-erb",
+    "onLanguage:b4um-thor-ruby",
+    "onLanguage:ruby"
   ],
   "categories": [
     "Programming Languages"
@@ -30,7 +32,8 @@
           "Thor ERB"
         ],
         "extensions": [
-          ".html.erb.tt"
+          ".html.erb.tt",
+          ".erb.tt"
         ],
         "configuration": "./language-configuration.json"
       },
@@ -41,7 +44,8 @@
           "Rails ERB"
         ],
         "extensions": [
-          ".html.erb"
+          ".html.erb",
+          ".erb"
         ],
         "configuration": "./language-configuration.json"
       },
@@ -52,7 +56,8 @@
           "Thor Ruby"
         ],
         "extensions": [
-          ".rb.tt"
+          ".rb.tt",
+          ".rake.tt"
         ],
         "configuration": "./language-configuration.json"
       },
@@ -79,6 +84,40 @@
         "configuration": "./language-configuration.json"
       }
     ],
+    "configurationDefaults": {
+      "[b4um-thor-erb]": {
+        "editor.defaultFormatter": "b4um.b4um-thor-templates",
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true
+      },
+      "[b4um-rails-erb]": {
+        "editor.defaultFormatter": "b4um.b4um-thor-templates",
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true
+      },
+      "[b4um-thor-ruby]": {
+        "editor.defaultFormatter": "b4um.b4um-thor-templates",
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true
+      }
+    },
+    "configuration": {
+      "title": "b4um Thor Templates",
+      "properties": {
+        "b4umThorTemplates.printWidth": {
+          "type": "integer",
+          "default": 80,
+          "minimum": 20,
+          "description": "Bevorzugte Zeilenlänge für die Ruby- und ERB-Formatierung."
+        },
+        "b4umThorTemplates.rubyExecutablePath": {
+          "type": "string",
+          "default": "ruby",
+          "scope": "machine-overridable",
+          "description": "Ruby-Executable mit installierten syntax_tree- und prettier_print-Gems."
+        }
+      }
+    },
     "grammars": [
       {
         "language": "b4um-thor-erb",
@@ -89,8 +128,16 @@
         "language": "b4um-rails-erb",
         "scopeName": "text.html.erb.thor",
         "path": "./syntaxes/thor-erb.tmLanguage.json"
+      },
+      {
+        "language": "b4um-thor-ruby",
+        "scopeName": "source.ruby.thor",
+        "path": "./syntaxes/thor-ruby.tmLanguage.json"
       }
     ]
+  },
+  "scripts": {
+    "test": "vitest run"
   },
   "dependencies": {
     "@ruby/prism": "^1.9.0",

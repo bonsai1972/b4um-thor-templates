@@ -1,0 +1,9 @@
+{
+  "rubocop.mode": "disable",
+  "files.associations": {
+    "*.rake.tt": "b4um-thor-ruby"
+  },
+  "[ruby]": {
+    "editor.defaultFormatter": "b4um.b4um-thor-templates"
+  }
+}
